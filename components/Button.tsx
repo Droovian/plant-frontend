@@ -1,59 +1,62 @@
-import { StyleSheet, View, Pressable, Text } from 'react-native';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { TouchableOpacity, Text } from "react-native";
 
-type Props = {
-  label: string;
-  theme?: 'primary';
-  onPress?: () => void;
+import { ButtonProps } from "@/types/type";
+
+const getBgVariantStyle = (variant: ButtonProps["bgVariant"]) => {
+  switch (variant) {
+    case "secondary":
+      return "bg-gray-500";
+    case "plant":
+      return "bg-[#5B8E55]";
+    case "danger":
+      return "bg-red-500";
+    case "success":
+      return "bg-green-500";
+    case "outline":
+      return "bg-transparent border-neutral-300 border-[0.5px]";
+    default:
+      return "bg-[#0286FF]";
+  }
 };
 
-export default function CustomButton({ label, theme, onPress }: Props) {
-  if (theme === 'primary') {
-    return (
-      <View
-        style={[
-          styles.buttonContainer,
-          { borderWidth: 4, borderColor: '#ffd33d', borderRadius: 18 },
-        ]}>
-        <Pressable style={[styles.button, { backgroundColor: '#fff' }]} onPress={onPress}>
-          <FontAwesome name="picture-o" size={18} color="#25292e" style={styles.buttonIcon} />
-          <Text style={[styles.buttonLabel, { color: '#25292e' }]}>{label}</Text>
-        </Pressable>
-      </View>
-    );
+const getTextVariantStyle = (variant: ButtonProps["textVariant"]) => {
+  switch (variant) {
+    case "primary":
+      return "text-black";
+    case "secondary":
+      return "text-gray-100";
+    case "danger":
+      return "text-red-100";
+    case "success":
+      return "text-green-100";
+    default:
+      return "text-white";
   }
+};
 
+const CustomButton = ({
+  onPress,
+  title,
+  bgVariant = "primary",
+  textVariant = "default",
+  IconLeft,
+  IconRight,
+  className,
+  ...props
+}: ButtonProps) => {
   return (
-    <View style={styles.buttonContainer}>
-      <Pressable style={styles.button} onPress={onPress}>
-        <Text style={styles.buttonLabel}>{label}</Text>
-      </Pressable>
-    </View>
+    <TouchableOpacity
+      onPress={onPress}
+      className={`w-full rounded-full p-3 flex flex-row justify-center items-center shadow-md shadow-neutral-400/70 ${getBgVariantStyle(bgVariant)} ${className}`}
+      {...props}
+    >
+      {IconLeft && <IconLeft />}
+      <Text className={`text-lg font-bold ${getTextVariantStyle(textVariant)}`}>
+        {title}
+      </Text>
+      {IconRight && <IconRight />}
+    </TouchableOpacity>
   );
-}
+};
 
-const styles = StyleSheet.create({
-  buttonContainer: {
-    width: 320,
-    height: 68,
-    marginHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 3,
-  },
-  button: {
-    borderRadius: 10,
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  buttonIcon: {
-    paddingRight: 8,
-  },
-  buttonLabel: {
-    color: '#fff',
-    fontSize: 16,
-  },
-});
+export default CustomButton;
