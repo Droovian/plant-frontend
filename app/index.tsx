@@ -6,7 +6,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.text}>Plant Perfect</Text>
-      <Text>Gardening app</Text>
+      <Text className="text-red-500 text-3xl">Gardening app</Text>
 
       <Link href="/home">Go to Home</Link>
     </SafeAreaView>
