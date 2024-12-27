@@ -1,28 +1,23 @@
-import { StyleSheet, Text, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import React from 'react'
+import { SignedIn, SignedOut, useUser } from '@clerk/clerk-expo'
+import { Link } from 'expo-router'
+import { Text, View } from 'react-native'
 
-const Home = () => {
+export default function Page() {
+  const { user } = useUser()
+
   return (
-    <SafeAreaView style={styles.parentContainer}>
-        <View>
-            <Text style={styles.header}>Welcome to Home</Text>
-        </View>
-    </SafeAreaView>
+    <View>
+      <SignedIn>
+        <Text>Hello {user?.emailAddresses[0].emailAddress}</Text>
+      </SignedIn>
+      <SignedOut>
+        <Link href="/(auth)/sign-in">
+          <Text>Sign in</Text>
+        </Link>
+        <Link href="/(auth)/sign-up">
+          <Text>Sign up</Text>
+        </Link>
+      </SignedOut>
+    </View>
   )
 }
-
-export default Home
-
-const styles = StyleSheet.create({
-    parentContainer:{
-        flex: 1,
-        backgroundColor: '#ffffff',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    header:{
-        color: '#000000',
-        fontSize: 30
-    }
-})
