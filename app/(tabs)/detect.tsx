@@ -59,30 +59,15 @@ export default function Detect() {
     }
   }
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.imageContainer}>
+    <SafeAreaView className='bg-[#25292e] flex-1 items-center justify-center'>
+      <View className='mb-7'>
         <ImageViewer imgSource={PlaceholderImage} selectedImage={selectedImage} />
       </View>
-      <View style={styles.footerContainer}>
-        <CustomButton theme="primary" label="Choose a photo" onPress={pickImageAsync} />
-        <CustomButton label="Use this photo" onPress={uploadImageAsync} />
-      </View>
+     
+      <CustomButton bgVariant='plant' title="Choose a photo" onPress={pickImageAsync} className='w-1/2' />
+      <CustomButton bgVariant='plant' title="Use this photo" onPress={uploadImageAsync} className='w-1/2 mt-5' />
+
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#25292e',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  imageContainer: {
-    flex: 1,
-  },
-  footerContainer: {
-    flex: 1 / 3,
-    alignItems: 'center',
-  },
-});

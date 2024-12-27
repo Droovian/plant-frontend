@@ -172,6 +172,7 @@ export default function SignUpScreen() {
           )}
           <CustomButton
             title="Verify Email"
+            bgVariant='plant'
             onPress={onPressVerify}
             className="mt-5 bg-success-500"
           />
@@ -191,7 +192,11 @@ export default function SignUpScreen() {
           </Text>
           <CustomButton
             title="Browse Home"
-            onPress={() => router.push(`/(tabs)/home`)}
+            bgVariant='plant'
+            onPress={() => {
+              setShowSuccessModal(false);
+              router.push(`/(tabs)/home`)
+            }}
             className="mt-5"
           />
         </View>

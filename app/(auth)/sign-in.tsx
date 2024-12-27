@@ -70,6 +70,7 @@ const SignIn = () => {
 
           <CustomButton
             title="Sign In"
+            bgVariant="plant"
             onPress={onSignInPress}
             className="mt-6"
           />
