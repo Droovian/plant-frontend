@@ -195,7 +195,7 @@ export default function SignUpScreen() {
             bgVariant='plant'
             onPress={() => {
               setShowSuccessModal(false);
-              router.push(`/(tabs)/home`)
+              router.push(`/(root)/(tabs)/home`)
             }}
             className="mt-5"
           />
