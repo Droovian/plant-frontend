@@ -8,6 +8,8 @@ import ImageViewer from '@/components/ImageViewer';
 
 export default function Detect() {
   const [selectedImage, setSelectedImage] = useState<string | undefined>(undefined);
+  const [prediction, setPrediction] = useState<string | undefined>(undefined);
+  const [confidence, setConfidence] = useState<number | undefined>(undefined);
 
   const pickImageAsync = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -19,15 +21,13 @@ export default function Detect() {
     if (!result.canceled) {
       setSelectedImage(result?.assets[0].uri);
       console.log(result?.assets[0]);
-      
-    }
-    else{
+    } else {
       alert('Image not selected');
     }
   }
-  
+
   const uploadImageAsync = async () => {
-    if(!selectedImage){
+    if (!selectedImage) {
       alert('No image selected to upload');
       return;
     }
@@ -40,7 +40,9 @@ export default function Detect() {
     } as any);
 
     try {
-      const response = await fetch('http://192.168.0.140:3000/api/images/upload', {
+      console.log(formData);
+      
+      const response = await fetch('http://192.168.0.140:8000/api/images/upload', {
         method: 'POST',
         body: formData,
         headers: {
@@ -49,25 +51,48 @@ export default function Detect() {
       });
 
       if (response.ok) {
-        alert('Image uploaded successfully');
+        const data = await response.json();
+        setPrediction(data.prediction); // assuming response contains the prediction
+        setConfidence(data.confidence); // confidence of the prediction
+
+        alert('Image uploaded and prediction received!');
       } else {
         alert('Image upload failed');
       }
-    }
-    catch (error) {
+    } catch (error) {
       console.error('Error uploading image:', error);
     }
   }
+
   return (
     <SafeAreaView className='bg-[#25292e] flex-1 items-center justify-center'>
       <View className='mb-7'>
         <ImageViewer imgSource={PlaceholderImage} selectedImage={selectedImage} />
       </View>
-     
-      <CustomButton bgVariant='plant' title="Choose a photo" onPress={pickImageAsync} className='w-1/2' />
-      <CustomButton bgVariant='plant' title="Use this photo" onPress={uploadImageAsync} className='w-1/2 mt-5' />
 
+      <CustomButton bgVariant='plant' title="Choose a photo" onPress={pickImageAsync} className='w-[150px]' />
+      <CustomButton bgVariant='plant' title="Use this photo" onPress={uploadImageAsync} className='w-[150px] mt-5' />
+
+      {prediction && (
+        <View style={styles.predictionContainer}>
+          <Text style={styles.predictionText}>Prediction: {prediction}</Text>
+          <Text style={styles.predictionText}>Confidence: {(confidence ?? 0) * 100}%</Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
 
+const styles = StyleSheet.create({
+  predictionContainer: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#fff',
+    borderRadius: 5,
+  },
+  predictionText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#25292e',
+  },
+});
