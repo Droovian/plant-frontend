@@ -6,7 +6,7 @@ import CustomButton from '@/components/Button';
 import { Modal } from 'react-native';
 
 interface Post {
-  id: string;
+  _id: string;
   title: string;
   content: string;
 }
@@ -50,12 +50,9 @@ const Community: React.FC = () => {
 
     const renderPost = ({ item }: { item: Post }) => (
         <TouchableOpacity
-            key={item.id}
+            key={item._id}
             onPress={() => {
-                router.push({ 
-                        pathname: "/community/post/[id]", 
-                        params: { id: item.id } 
-                    });
+                router.push(`/community/post/${item?._id}`);
             }}
             className="rounded-xl p-5 mb-4 shadow-md" 
             
@@ -84,7 +81,7 @@ const Community: React.FC = () => {
                 />
                 <FlatList
                     data={filteredPosts}
-                    keyExtractor={(item, idx) => item?.id ?? idx.toString()}
+                    keyExtractor={(item) => item._id || item.title}
                     renderItem={renderPost}
                     ListEmptyComponent={
                         <Text className="text-center text-gray-500">
