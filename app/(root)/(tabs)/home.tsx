@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import * as Location from 'expo-location'
 import { useState, useEffect } from 'react'
+import Push from '@/components/Push';
 
 export default function Page() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
@@ -47,6 +48,7 @@ export default function Page() {
       <SignedIn>
         <Text className='text-2xl'>Hello {user?.emailAddresses[0].emailAddress}</Text>
 
+        {/* <Push /> */}
         <TouchableOpacity onPress={() => router.push("/(root)/virtual-garden")}>
           <View className='my-5 bg-[#5B8E55] p-5 rounded-md'>
             <Text className='text-white text-xl'>Create your layout</Text>

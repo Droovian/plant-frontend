@@ -32,6 +32,7 @@ export default function SignUpScreen() {
     if (!isLoaded) return;
     try {
       await signUp.create({
+        username: form.name,
         emailAddress: form.email,
         password: form.password,
       });
@@ -57,14 +58,17 @@ export default function SignUpScreen() {
       });
       if (completeSignUp.status === "complete") {
 
-        // await fetchAPI("/(api)/user", {
-        //   method: "POST",
-        //   body: JSON.stringify({
-        //     name: form.name,
-        //     email: form.email,
-        //     clerkId: completeSignUp.createdUserId,
-        //   }),
-        // });
+        await fetch("http://192.168.0.140:3000/api/user", {
+          method: "POST",
+          body: JSON.stringify({
+            clerkId: completeSignUp.createdUserId,
+            name: form.name,
+            email: form.email,
+          }),
+          headers: {
+            "Content-Type": "application/json",
+          }
+        });
 
         await setActive({ session: completeSignUp.createdSessionId });
 
