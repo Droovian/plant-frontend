@@ -54,7 +54,7 @@ const SAMPLE_CROPS: CropType[] = [
 const UNITS = ['feet', 'meters'] as const;
 type Unit = typeof UNITS[number];
 
-const Create = () => {
+const Garden = () => {
   const { user } = useUser();
   // console.log(user?.id);
   const [layoutName, setLayoutName] = useState<string>('');
@@ -166,11 +166,6 @@ const Create = () => {
     <SafeAreaView className="bg-white">
       <ScrollView className="p-4">
         <View className="mb-6">
-          <TouchableOpacity onPress={() => router.replace("/(root)/(tabs)/home")}>
-              <View className="w-10 h-10 bg-white rounded-full items-center justify-center">
-                <Image source={icons?.backArrow} className="w-6 h-6" />
-              </View>
-            </TouchableOpacity>
           <Text className="text-2xl font-bold mb-4">Garden Layout Planner</Text>
           
           <View className="bg-gray-50 p-4 rounded-xl mb-6">
@@ -294,4 +289,4 @@ const Create = () => {
   );
 };
 
-export default Create;
+export default Garden;

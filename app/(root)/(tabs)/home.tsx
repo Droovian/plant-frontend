@@ -53,7 +53,7 @@ export default function HomePage() {
             icon="leaf-outline"
             title="Virtual Gardening"
             description="Design and plan your dream garden"
-            onPress={() => router.push("/(root)/virtual-garden")}
+            onPress={() => router.push("/(root)/garden")}
           />
 
           <FeatureCard
