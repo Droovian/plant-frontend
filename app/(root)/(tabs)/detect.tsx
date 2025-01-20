@@ -70,8 +70,8 @@ export default function Detect() {
         <ImageViewer imgSource={PlaceholderImage} selectedImage={selectedImage} />
       </View>
 
-      <CustomButton bgVariant='plant' title="Choose a photo" onPress={pickImageAsync} className='w-[150px]' />
-      <CustomButton bgVariant='plant' title="Use this photo" onPress={uploadImageAsync} className='w-[150px] mt-5' />
+      <CustomButton bgVariant='plant' title="Choose a photo" onPress={pickImageAsync} className='w-[140px]' />
+      <CustomButton bgVariant='plant' title="Use this photo" onPress={uploadImageAsync} className='w-[140px] mt-5' />
 
       {prediction && (
         <View style={styles.predictionContainer}>

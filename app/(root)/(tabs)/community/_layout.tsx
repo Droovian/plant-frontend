@@ -17,7 +17,7 @@ export default function CommunityLayout() {
         name="post/[id]"
         options={{
           title: "Post Detail",
-          headerShown: true, 
+          headerShown: false, 
         }}
         />
      

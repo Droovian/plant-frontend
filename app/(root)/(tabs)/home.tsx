@@ -1,77 +1,99 @@
-import { SignedIn, SignedOut, useUser } from '@clerk/clerk-expo'
-import { Link } from 'expo-router'
-import { Text, View, TouchableOpacity } from 'react-native'
-import { useAuth } from '@clerk/clerk-expo'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
-import * as Location from 'expo-location'
-import { useState, useEffect } from 'react'
-import Push from '@/components/Push';
+import React from "react"
+import { SignedIn, SignedOut, useUser } from "@clerk/clerk-expo"
+import { Link, router } from "expo-router"
+import { Text, View, TouchableOpacity, ScrollView, Image } from "react-native"
+import { useAuth } from "@clerk/clerk-expo"
+import { SafeAreaView } from "react-native-safe-area-context"
+import { Ionicons } from "@expo/vector-icons"
 
-export default function Page() {
-  const [location, setLocation] = useState<Location.LocationObject | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+const FeatureCard = ({ icon, title, description, onPress }: any) => (
+  <TouchableOpacity className="bg-white rounded-xl p-4 shadow-md mb-4 flex-row items-center" onPress={onPress}>
+    <View className="bg-green-100 rounded-full p-3 mr-4">
+      <Ionicons name={icon} size={24} color="#5B8E55" />
+    </View>
+    <View className="flex-1">
+      <Text className="text-lg font-semibold text-gray-800">{title}</Text>
+      <Text className="text-sm text-gray-600">{description}</Text>
+    </View>
+    <Ionicons name="chevron-forward" size={24} color="#5B8E55" />
+  </TouchableOpacity>
+)
 
-  useEffect(() => {
-    async function getCurrentLocation(){
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Permission to access location was denied');
-        return;
-      }
-
-      let location = await Location.getCurrentPositionAsync({});
-      
-      setLocation(location);
-    }
-
-    getCurrentLocation();
-  }, []);
-
-  let text = 'Waiting...';
-  if (errorMsg) {
-    text = errorMsg;
-  } else if (location) {
-    text = JSON.stringify(location);
-  }
-
+export default function HomePage() {
   const { user } = useUser()
   const { signOut } = useAuth()
 
   const handleSignOut = () => {
-     signOut();
-     router.replace("/(auth)/sign-in");
+    signOut()
+    router.replace("/(auth)/sign-in")
   }
 
   return (
-    <SafeAreaView className='flex-1 items-center justify-center'>
-      <SignedIn>
-        <Text className='text-2xl'>Hello {user?.emailAddresses[0].emailAddress}</Text>
-
-        {/* <Push /> */}
-        <TouchableOpacity onPress={() => router.push("/(root)/virtual-garden")}>
-          <View className='my-5 bg-[#5B8E55] p-5 rounded-md'>
-            <Text className='text-white text-xl'>Create your layout</Text>
+    <SafeAreaView className="flex-1 bg-green-50">
+      <ScrollView className="flex-1 px-4 pt-4">
+        <SignedIn>
+          <View className="flex-row justify-between items-center mb-6">
+            <View>
+              <Text className="text-2xl font-bold text-gray-800">Welcome back, {user?.username}</Text>
+              <Text className="text-lg text-gray-600">{user?.firstName || user?.emailAddresses[0].emailAddress}</Text>
+            </View>
+            <TouchableOpacity onPress={handleSignOut} className="p-2">
+              <Ionicons name="log-out-outline" size={24} color="#5B8E55" />
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleSignOut}
-        className="justify-center items-center w-20 h-10 rounded-full bg-red-700"
-        >
-          <Text className='text-white'>Sign out</Text>
-        </TouchableOpacity>
 
+          <Image
+            source={{ uri: "https://placeholder.svg?height=200&width=400" }}
+            className="w-full h-40 rounded-xl mb-6"
+          />
 
+          <Text className="text-xl font-semibold mb-4 text-gray-800">Explore Features</Text>
 
-       
-      </SignedIn>
-      <SignedOut>
-        <Link href="/(auth)/sign-in">
-          <Text>Sign in</Text>
-        </Link>
-        <Link href="/(auth)/sign-up">
-          <Text>Sign up</Text>
-        </Link>
-      </SignedOut>
+          <FeatureCard
+            icon="leaf-outline"
+            title="Virtual Gardening"
+            description="Design and plan your dream garden"
+            onPress={() => router.push("/(root)/virtual-garden")}
+          />
+
+          <FeatureCard
+            icon="bug-outline"
+            title="Pest & Animal Detection"
+            description="Identify and manage garden intruders"
+            onPress={() => {}}
+          />
+
+          <FeatureCard
+            icon="camera-outline"
+            title="Disease Detection"
+            description="Upload photos to diagnose plant issues"
+            onPress={() => {}}
+          />
+
+          <FeatureCard
+            icon="people-outline"
+            title="Community"
+            description="Connect with fellow gardeners"
+            onPress={() => {}}
+          />
+        </SignedIn>
+        <SignedOut>
+          <View className="flex-1 items-center justify-center">
+            <Text className="text-xl mb-4">Welcome to PlantPal</Text>
+            <Link href="/(auth)/sign-in" asChild>
+              <TouchableOpacity className="bg-green-600 py-2 px-4 rounded-full mb-2">
+                <Text className="text-white font-semibold">Sign In</Text>
+              </TouchableOpacity>
+            </Link>
+            <Link href="/(auth)/sign-up" asChild>
+              <TouchableOpacity className="bg-white border border-green-600 py-2 px-4 rounded-full">
+                <Text className="text-green-600 font-semibold">Sign Up</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
+        </SignedOut>
+      </ScrollView>
     </SafeAreaView>
   )
 }
+
