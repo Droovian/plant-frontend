@@ -5,6 +5,7 @@ import { Text, View, TouchableOpacity, ScrollView, Image } from "react-native"
 import { useAuth } from "@clerk/clerk-expo"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
+import LayoutImage from "@/assets/images/layout.png";
 
 const FeatureCard = ({ icon, title, description, onPress }: any) => (
   <TouchableOpacity className="bg-white rounded-xl p-4 shadow-md mb-4 flex-row items-center" onPress={onPress}>
@@ -42,10 +43,21 @@ export default function HomePage() {
             </TouchableOpacity>
           </View>
 
-          <Image
-            source={{ uri: "https://placeholder.svg?height=200&width=400" }}
-            className="w-full h-40 rounded-xl mb-6"
-          />
+          <TouchableOpacity className="relative" onPress={() => router.push("/(root)/garden")}>
+            <Image
+              source={LayoutImage}
+              className="w-full h-72 rounded-xl mb-6"
+            />
+
+            <View className="absolute">
+              <Text className="text-white text-4xl font-bold top-20 left-4">
+                Create your garden
+              </Text>
+              <Text className="text-white text-xl mx-5 top-24">
+                Get in depth information, tips, and tricks to help you grow your garden
+              </Text>
+            </View>
+          </TouchableOpacity>
 
           <Text className="text-xl font-semibold mb-4 text-gray-800">Explore Features</Text>
 

@@ -130,6 +130,7 @@ export default function SignUpScreen() {
         />
         <CustomButton
           title="Sign Up"
+          bgVariant='plant'
           onPress={onSignUpPress}
           className="mt-6"
         />

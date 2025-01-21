@@ -117,7 +117,7 @@ const PostDetail = () => {
 
   if (isLoading) {
     return (
-      <View className="flex-1 justify-center items-center bg-green-50">
+      <View className="flex-1 justify-center items-center bg-green-100">
         <ActivityIndicator size="large" color="#4CAF50" />
       </View>
     )
