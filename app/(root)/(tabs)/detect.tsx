@@ -42,7 +42,7 @@ export default function Detect() {
     try {
       console.log(formData);
       
-      const response = await fetch('http://192.168.0.140:8000/api/images/upload', {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_PYAPI_KEY}/api/images/upload`, {
         method: 'POST',
         body: formData,
         headers: {

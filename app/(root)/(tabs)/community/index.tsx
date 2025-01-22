@@ -23,7 +23,7 @@ const Community: React.FC = () => {
 
   const fetchPosts = useCallback(async () => {
     try {
-      const response = await fetch("http://192.168.0.140:3000/api/community/all", {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/community/all`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

@@ -18,9 +18,7 @@ const Garden = () => {
   const fetchWeather = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://api.weatherapi.com/v1/forecast.json?key=${weatherApiKey}&q=${address?.city}&days=3`, {
-        cache: 'no-store'
-      });
+      const response = await fetch(`http://api.weatherapi.com/v1/forecast.json?key=${weatherApiKey}&q=${address?.city}&days=3`);
       if (!response.ok) {
         throw new Error('Failed to fetch weather data');
       }

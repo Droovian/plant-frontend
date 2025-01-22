@@ -1,11 +1,10 @@
 import * as React from 'react'
-import { Text, TextInput, Button, View, Alert, ScrollView, Image } from 'react-native'
+import { Text, View, Alert, ScrollView } from 'react-native'
 import { Link } from 'expo-router'
 import { useSignUp } from '@clerk/clerk-expo'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { fetchAPI } from '@/lib/fetch'
 import CustomButton from '@/components/Button'
 import InputField from '@/components/InputField'
 import { ReactNativeModal } from "react-native-modal";
@@ -58,7 +57,7 @@ export default function SignUpScreen() {
       });
       if (completeSignUp.status === "complete") {
 
-        await fetch("http://192.168.0.140:3000/api/user", {
+        await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/user`, {
           method: "POST",
           body: JSON.stringify({
             clerkId: completeSignUp.createdUserId,

@@ -64,7 +64,7 @@ const PostDetail = () => {
 
   const fetchPostDetails = async (postId: string) => {
     try {
-      const response = await fetch(`http://192.168.0.140:3000/api/community/${postId}`)
+      const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/community/${postId}`)
       const data = await response.json()
       setPost(data)
       setIsLoading(false)
@@ -77,7 +77,7 @@ const PostDetail = () => {
 
   const fetchComments = async (postId: string) => {
     try {
-      const response = await fetch(`http://192.168.0.140:3000/api/community/${postId}/comments`)
+      const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/community/${postId}/comments`)
       const data = await response.json()
       setComments(data)
     } catch (error) {
@@ -89,7 +89,7 @@ const PostDetail = () => {
   const handleCommentSubmit = async () => {
     if (commentText.trim()) {
       try {
-        const response = await fetch(`http://192.168.0.140:3000/api/community/${postId}/comment`, {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/community/${postId}/comment`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

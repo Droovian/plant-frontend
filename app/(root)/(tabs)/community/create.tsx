@@ -25,7 +25,7 @@ const Create = () => {
     }
 
     try {
-      await fetch('http://192.168.0.140:3000/api/community/add', {
+      await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/community/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
