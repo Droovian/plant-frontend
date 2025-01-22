@@ -30,7 +30,7 @@ interface WeatherBannerProps {
 
 const WeatherBanner: React.FC<WeatherBannerProps> = ({ weather, address }) => {
   return (
-    <View className="bg-green-800 rounded-3xl p-4 mb-6">
+    <View className="bg-blue-500 rounded-3xl p-4 mb-6">
       <View className="flex-row justify-between items-center mb-4">
         <View>
           <Text className="text-white text-2xl font-bold">{address?.city}</Text>
