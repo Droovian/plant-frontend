@@ -14,6 +14,7 @@ import { useUser } from "@clerk/clerk-expo"
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons"
 import CustomButton from "@/components/Button"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useAuth } from "@clerk/clerk-expo"
 
 interface Post {
   id: string
@@ -33,6 +34,7 @@ interface Comment {
 
 const PostDetail = () => {
   const { id } = useLocalSearchParams()
+  const { getToken } = useAuth()
   const { user } = useUser()
   const router = useRouter()
   const insets = useSafeAreaInsets()
@@ -63,8 +65,15 @@ const PostDetail = () => {
   }, [fadeAnim])
 
   const fetchPostDetails = async (postId: string) => {
+    const token = await getToken();
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/community/${postId}`)
+      const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/community/${postId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
       const data = await response.json()
       setPost(data)
       setIsLoading(false)
@@ -76,8 +85,16 @@ const PostDetail = () => {
   }
 
   const fetchComments = async (postId: string) => {
+
+    const token = await getToken();
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/community/${postId}/comments`)
+      const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/community/${postId}/comments`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
       const data = await response.json()
       setComments(data)
     } catch (error) {
@@ -87,11 +104,16 @@ const PostDetail = () => {
   }
 
   const handleCommentSubmit = async () => {
+
+    const token = await getToken();
     if (commentText.trim()) {
       try {
         const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/community/${postId}/comment`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+           },
           body: JSON.stringify({
             text: commentText,
             userId: userId,

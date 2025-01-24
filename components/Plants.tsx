@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react"
 import { View, Text, Image, TouchableOpacity, Dimensions } from "react-native"
 import { router } from "expo-router"
 import Carousel from "react-native-reanimated-carousel"
+import { useAuth } from "@clerk/clerk-expo"
 
 interface Plant {
   _id: string
@@ -14,6 +15,7 @@ interface Plant {
 const { width: screenWidth } = Dimensions.get("window")
 
 const Plant = () => {
+  const { getToken } = useAuth();
   const [plants, setPlants] = useState<Plant[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
@@ -21,8 +23,15 @@ const Plant = () => {
 
   useEffect(() => {
     const fetchPlants = async () => {
+      const token = await getToken();
       try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/plant`)
+        const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/plant`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
         const data = await response.json()
         setPlants(data)
         setLoading(false)

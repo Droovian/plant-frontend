@@ -18,6 +18,7 @@ import {
   Scale,
   Leaf,
 } from "lucide-react-native"
+import { useAuth } from "@clerk/clerk-expo"
 
 interface Temperature {
   min: number
@@ -72,6 +73,7 @@ const { width: screenWidth } = Dimensions.get("window")
 
 const PlantIndividual = () => {
   const { plantId } = useLocalSearchParams()
+  const { getToken } = useAuth()
   const [plant, setPlant] = useState<Plant | null>(null)
   const router = useRouter()
   const [loading, setLoading] = useState<boolean>(true)
@@ -79,8 +81,19 @@ const PlantIndividual = () => {
 
   useEffect(() => {
     const fetchPlantDetails = async () => {
+      const token = await getToken()
       try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/plant/${plantId}`)
+
+        if(!token){
+          return router.push('/sign-in')
+        }
+        const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/plant/${plantId}`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
         const data = await response.json()
         setPlant(data)
         setLoading(false)

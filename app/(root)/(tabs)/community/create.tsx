@@ -4,9 +4,11 @@ import { Picker } from '@react-native-picker/picker';
 import CustomButton from '@/components/Button';
 import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/clerk-expo';
+import { useAuth } from '@clerk/clerk-expo';
 
 const Create = () => {
   const [title, setTitle] = useState<string>('');
+  const { getToken } = useAuth();
   const [content, setContent] = useState<string>('');
   const [type, setType] = useState<string>('General');
   const router = useRouter();
@@ -20,6 +22,13 @@ const Create = () => {
   const userId = user?.id;
 
   const handleSubmit = async () => {
+
+    const token = await getToken();
+
+    if(!token){
+      alert('Please sign in to create a post');
+    }
+
     if (!title || !content || !type || !userId) {
       return alert('Please fill in all fields');
     }
@@ -28,6 +37,7 @@ const Create = () => {
       await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/community/add`, {
         method: 'POST',
         headers: {
+           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

@@ -5,6 +5,7 @@ import { useRouter } from "expo-router"
 import CustomButton from "@/components/Button"
 import { AntDesign, Ionicons } from "@expo/vector-icons"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useAuth } from "@clerk/clerk-expo"
 
 interface Post {
   _id: string
@@ -16,16 +17,24 @@ interface Post {
 const Community: React.FC = () => {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { getToken } = useAuth()
   const [posts, setPosts] = useState<Post[]>([])
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [filteredPosts, setFilteredPosts] = useState<Post[]>([])
   const [refreshing, setRefreshing] = useState(false)
 
   const fetchPosts = useCallback(async () => {
+
+    const token = await getToken();
+
+    if(!token){
+      return;
+    }
     try {
       const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/community/all`, {
         method: "GET",
         headers: {
+          Authorization: `Bearer ${await getToken()}`,
           "Content-Type": "application/json",
         },
       })
