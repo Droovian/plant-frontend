@@ -6,10 +6,12 @@ import useLocationStore from "@/store"
 import WeatherBanner from "@/components/WeatherBanner"
 import Plant from "@/components/Plants"
 import { Cloud, Sprout, Settings, Search, Sun, Droplets, Wind, AlertCircle } from "lucide-react-native"
-
+import { Ionicons } from "@expo/vector-icons"
+import { useRouter } from "expo-router"
 const Garden = () => {
   const { location, address, errorMsg, addressErrorMsg, getLocation, getAddress } = useLocationStore()
   const insets = useSafeAreaInsets()
+  const router = useRouter()
   const weatherApiKey = process.env.EXPO_PUBLIC_WEATHER_API_KEY!
   const [weather, setWeatherForecast] = useState<any | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
@@ -81,6 +83,13 @@ const Garden = () => {
   return (
     <SafeAreaView className="flex-1 bg-green-50" style={{ paddingTop: insets.top }}>
     
+      <TouchableOpacity
+        onPress={() => router.back()}
+        className="absolute top-4 left-4 bg-white rounded-full p-2 shadow-md"
+        style={{ marginTop: insets.top }}
+      >
+        <Ionicons name="arrow-back" size={24} color="#4CAF50" />
+      </TouchableOpacity>
       <ScrollView
         className=""
         refreshControl={

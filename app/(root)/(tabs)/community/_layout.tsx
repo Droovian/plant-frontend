@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import React from "react";
 import { FontAwesome } from "@expo/vector-icons";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export default function CommunityLayout() {
   return (
