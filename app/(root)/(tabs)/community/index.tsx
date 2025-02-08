@@ -30,7 +30,6 @@ const Community: React.FC = () => {
   const fetchPosts = useCallback(async () => {
     
     const token = await getToken();
-    console.log('render');
     
     if(!token){
       return;

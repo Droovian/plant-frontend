@@ -1,16 +1,27 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Platform,
+  ScrollView,
+  StyleSheet,
+} from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import CustomButton from '@/components/Button';
 import { useRouter } from 'expo-router';
-import { useUser } from '@clerk/clerk-expo';
-import { useAuth } from '@clerk/clerk-expo';
+import { useUser, useAuth } from '@clerk/clerk-expo';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-const Create = () => {
+const CreatePost = () => {
   const [title, setTitle] = useState<string>('');
-  const { getToken } = useAuth();
   const [content, setContent] = useState<string>('');
   const [type, setType] = useState<string>('General');
+  const { getToken } = useAuth();
   const router = useRouter();
   const { user } = useUser();
 
@@ -22,96 +33,146 @@ const Create = () => {
   const userId = user?.id;
 
   const handleSubmit = async () => {
-
     const token = await getToken();
 
-    if(!token){
+    if (!token) {
       alert('Please sign in to create a post');
+      return;
     }
 
-    if (!title || !content || !type || !userId) {
-      return alert('Please fill in all fields');
+    if (!title.trim() || !content.trim() || !type || !userId) {
+      alert('Please fill in all fields');
+      return;
     }
 
     try {
-      await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/community/add`, {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/community/add`, {
         method: 'POST',
         headers: {
-           Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          title,
-          content,
-          type,
-          userId,
-        }),
+        body: JSON.stringify({ title, content, type, userId }),
       });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
 
       alert('Post created successfully!');
       setTitle('');
       setContent('');
-      setType('General'); 
+      setType('General');
     } catch (error) {
       alert('An error occurred. Please try again later.');
+      console.error('Error:', error);
     }
   };
 
   return (
     <KeyboardAvoidingView
-      behavior="padding"
-      style={{ flex: 1 }}
-      keyboardVerticalOffset={60}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-    <SafeAreaView className="flex-1 bg-gray-100 p-4">
-      <View className="rounded-lg p-4 mb-4">
-        <Text className="text-md font-medium text-gray-700 mb-2">Title</Text>
-        <TextInput
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          value={title}
-          onChangeText={setTitle}
-          placeholder="Enter post title"
-        />
-      </View>
+        <SafeAreaView style={styles.safeArea}>
+          <ScrollView contentContainerStyle={styles.scrollView}>
+            <View style={styles.formContainer}>
+              <View style={styles.inputContainer}>
+                <MaterialCommunityIcons name="format-title" size={24} color="#4A5568" style={styles.icon} />
+                <TextInput
+                  style={styles.input}
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="Enter post title"
+                  placeholderTextColor="#A0AEC0"
+                />
+              </View>
 
-      <View className="rounded-lg p-4 mb-4">
-        <Text className="text-md font-medium text-gray-700 mb-2">Message</Text>
-        <TextInput
-          className="w-full h-32 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          value={content}
-          onChangeText={setContent}
-          placeholder="Enter your message"
-          multiline
-          textAlignVertical="top"
-        />
-      </View>
+              <View style={styles.inputContainer}>
+                <MaterialCommunityIcons name="text" size={24} color="#4A5568" style={styles.icon} />
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={content}
+                  onChangeText={setContent}
+                  placeholder="Enter your message"
+                  placeholderTextColor="#A0AEC0"
+                  multiline
+                  textAlignVertical="top"
+                />
+              </View>
 
-      <View className="rounded-lg p-4 mb-4">
-        <Text className="text-md font-medium text-gray-700 mb-2">Type</Text>
-        {/* <View className="border rounded-md"> */}
-          <Picker
-            selectedValue={type}
-            onValueChange={(itemValue: string) => setType(itemValue)}
-            style={{ backgroundColor: '' }}
-          >
-            <Picker.Item label="General" value="General" color='black' />
-            <Picker.Item label="Help" value="Help" color='black'  />
-            <Picker.Item label="Tips" value="Tips" color='black'  />
-            <Picker.Item label="DIY" value="DIY" color='black'  />
-            <Picker.Item label="Organic" value="Organic" color='black'  />
-            <Picker.Item label="Identification" value="Identification" color='black'  />
-            <Picker.Item label="Inspiration" value="Inspiration" color='black'  />
-            <Picker.Item label="Projects" value="Projects" color='black'  />
-          </Picker>
-        {/* </View> */}
-      </View>
+              <View style={styles.pickerContainer}>
+                <MaterialCommunityIcons name="format-list-bulleted-type" size={24} color="#4A5568" style={styles.icon} />
+                <Picker
+                  selectedValue={type}
+                  onValueChange={(itemValue: string) => setType(itemValue)}
+                  style={styles.picker}
+                >
+                  {['General', 'Help', 'Tips', 'DIY', 'Organic', 'Identification', 'Inspiration', 'Projects'].map((item) => (
+                    <Picker.Item key={item} label={item} value={item} color="#2D3748" />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+           
+            <CustomButton title="Create Post" onPress={handleSubmit} bgVariant="plant" className='mt-32 w-1/2 mx-auto' />
+          </ScrollView>
+          
+            
 
-      <CustomButton title="Submit" onPress={handleSubmit} bgVariant="plant" />
-    </SafeAreaView>
-    </TouchableWithoutFeedback>
+        </SafeAreaView>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 };
 
-export default Create;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F7FAFC',
+  },
+  scrollView: {
+    flexGrow: 1,
+  },
+  formContainer: {
+    padding: 16,
+    gap: 16,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EDF2F7',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+  },
+  icon: {
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#2D3748',
+  },
+  textArea: {
+    height: 120,
+  },
+  pickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EDF2F7',
+    borderRadius: 8,
+    paddingLeft: 12,
+  },
+  picker: {
+    flex: 1,
+    height: 50,
+  },
+});
+
+export default CreatePost;
