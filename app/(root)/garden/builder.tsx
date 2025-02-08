@@ -1,17 +1,21 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Text, View, Animated, ScrollView, Image, TouchableOpacity } from "react-native"
+import { Text, View, Animated, ScrollView, TouchableOpacity, Image } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import CustomButton from "@/components/Button"
 import { MotiView } from "moti"
 import { useGardenStore } from "@/store"
+import Okra from "@/assets/images/okra.png";
+import Tomato from "@/assets/images/tomato.png";
+import Chilli from "@/assets/images/chilli.png";
+import Eggplant from "@/assets/images/eggplant.png";
 
 const vegetables = [
-  { name: "Okra", image: "/placeholder.svg?height=50&width=50" },
-  { name: "Tomato", image: "/placeholder.svg?height=50&width=50" },
-  { name: "Chilli", image: "/placeholder.svg?height=50&width=50" },
-  { name: "Brinjal", image: "/placeholder.svg?height=50&width=50" },
+  { name: "Okra", image: Okra },
+  { name: "Tomato", image: Tomato },
+  { name: "Chilli", image: Chilli },
+  { name: "Brinjal", image: Eggplant },
 ]
 
 const Builder = () => {
@@ -53,16 +57,16 @@ const Builder = () => {
         <Text className="text-2xl font-bold text-green-800">Build Your Garden</Text>
       </MotiView>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="h-24 mb-4">
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
         {vegetables.map((veg, index) => (
           <TouchableOpacity
             key={index}
-            className={`items-center p-2 mx-2 rounded-lg border-2 ${
+            className={`flex my-auto items-center p-4 mx-2 rounded-lg border-2 ${
               selectedVegetable === veg.name ? "border-green-800 bg-green-200" : "border-transparent"
             }`}
             onPress={() => setSelectedVegetable(veg.name)}
           >
-            <Image source={{ uri: veg.image }} className="w-14 h-14 rounded-full" />
+            <Image source={veg?.image} className="w-10 h-10 rounded-full" />
             <Text className="mt-1 text-sm text-green-900">{veg.name}</Text>
           </TouchableOpacity>
         ))}
@@ -87,8 +91,8 @@ const Builder = () => {
               >
                 {cell && (
                   <Image 
-                    source={{ uri: vegetables.find((v) => v.name === cell)?.image }} 
-                    className="w-7 h-7" 
+                    source={ vegetables.find((v) => v.name === cell)?.image } 
+                    className="w-4 h-4" 
                   />
                 )}
               </TouchableOpacity>
