@@ -56,6 +56,8 @@ const PostDetail = () => {
     }
   }, [postId])
 
+  // console.log(comments);
+  
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -162,7 +164,7 @@ const PostDetail = () => {
           style={{ opacity: fadeAnim }}
           className="bg-white rounded-lg shadow-lg mx-4 mt-20 overflow-hidden"
         >
-          <View className="bg-green-600 p-4">
+          <View className="bg-black p-4">
             <Text className="text-2xl font-bold text-white">{post.title}</Text>
             <View className="flex-row items-center mt-2">
               <Ionicons name="person-circle-outline" size={20} color="white" />
@@ -182,7 +184,7 @@ const PostDetail = () => {
               <Ionicons
                 name={showCommentInput ? "close-circle-outline" : "add-circle-outline"}
                 size={24}
-                color="#4CAF50"
+                color="black"
               />
             </TouchableOpacity>
           </View>
@@ -194,6 +196,7 @@ const PostDetail = () => {
               <TextInput
                 className="border border-gray-300 rounded-lg p-3 text-gray-700 min-h-[80px] mb-2"
                 placeholder="Add a comment..."
+                placeholderTextColor={"#636363"}
                 value={commentText}
                 onChangeText={setCommentText}
                 multiline
@@ -208,14 +211,14 @@ const PostDetail = () => {
               key={comment.id || idx}
               className="border-b border-gray-200 pb-4 mb-4 last:border-b-0 last:mb-0 last:pb-0"
             >
-              <View className="flex-row items-center mb-2">
-                <Ionicons name="person-circle-outline" size={24} color="#4CAF50" />
-                <Text className="text-sm font-semibold text-gray-800 ml-2">{comment.user}</Text>
+              <View className="flex-row items-center p-3">
+                <Ionicons name="person-circle-outline" size={24} color="black"  />
+                <Text className="text-gray-600 text-sm font-semibold ml-8">{comment.text}</Text>
                 <Text className="text-xs text-gray-500 ml-auto">
                   {new Date(comment.createdAt).toLocaleDateString()}
                 </Text>
               </View>
-              <Text className="text-gray-600 ml-8">{comment.text}</Text>
+              
             </Animated.View>
           ))}
         </View>
