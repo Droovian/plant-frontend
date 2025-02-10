@@ -117,7 +117,7 @@ const CreatePost = () => {
               </View>
             </View>
            
-            <CustomButton title="Create Post" onPress={handleSubmit} bgVariant="plant" className='mt-32 w-1/2 mx-auto' />
+            <CustomButton title="Create Post" onPress={handleSubmit} bgVariant="plant" className='mt-32 w-3/4 mx-auto' />
           </ScrollView>
           
             

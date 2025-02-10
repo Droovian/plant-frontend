@@ -1,12 +1,11 @@
-import type React from "react"
 import { useEffect, useState, useCallback } from "react"
-import { FlatList, Text, TouchableOpacity, View, SafeAreaView, TextInput, RefreshControl, Modal, Alert } from "react-native"
+import { FlatList, Text, TouchableOpacity, View, SafeAreaView, TextInput, RefreshControl, Modal, Alert, Image } from "react-native"
 import { useRouter } from "expo-router"
 import CustomButton from "@/components/Button"
-import { AntDesign, Ionicons } from "@expo/vector-icons"
+import { Ionicons, Feather } from "@expo/vector-icons"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useAuth } from "@clerk/clerk-expo"
-import Entypo from '@expo/vector-icons/Entypo';
+import AntDesign from '@expo/vector-icons/AntDesign';
 
 interface Post {
   _id: string
@@ -14,45 +13,76 @@ interface Post {
   content: string
   type: string
   userId: string
+  createdAt?: Date
 }
 
-const Community: React.FC = () => {
+interface PostResponse {
+  posts: Post[]
+  currentPage: number
+  totalPages: number
+  totalPosts: number
+}
+
+const Community = () => {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { getToken, userId } = useAuth()
+  
   const [posts, setPosts] = useState<Post[]>([])
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [filteredPosts, setFilteredPosts] = useState<Post[]>([])
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false)
+  
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(0)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
 
-  const fetchPosts = useCallback(async () => {
-    
+  const fetchPosts = useCallback(async (page: number, isRefresh: boolean = false) => {
     const token = await getToken();
     
     if(!token){
-      return;
+      return null;
     }
+    
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/community/all`, {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/community/all?page=${page}&limit=5`, {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${await getToken()}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       })
-      const data = await response.json()
-      setPosts(data)
+      
+      const data: PostResponse = await response.json()
+      
+      if (isRefresh) {
+        setPosts(data.posts)
+      } else {
+
+        setPosts(prevPosts => {
+          const newPosts = data.posts.filter(
+            newPost => !prevPosts.some(existingPost => existingPost._id === newPost._id)
+          )
+          return [...prevPosts, ...newPosts]
+        })
+      }
+      
+      setCurrentPage(data.currentPage)
+      setTotalPages(data.totalPages)
+      
+      return data
     } catch (error) {
       console.error("Error fetching posts:", error)
-      alert("An error occurred. Please try again later.")
+      Alert.alert("An error occurred. Please try again later.")
+      return null
     }
   }, [])
 
   useEffect(() => {
-    fetchPosts()
-  }, [fetchPosts])
+    fetchPosts(1)
+  }, [])
 
   useEffect(() => {
     filterPosts()
@@ -66,6 +96,21 @@ const Community: React.FC = () => {
     )
     setFilteredPosts(filtered)
   }
+
+  // Refresh handler
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await fetchPosts(1, true)
+    setRefreshing(false)
+  }, [])
+
+  const loadMorePosts = useCallback(async () => {
+    if (currentPage < totalPages && !isLoadingMore) {
+      setIsLoadingMore(true)
+      await fetchPosts(currentPage + 1)
+      setIsLoadingMore(false)
+    }
+  }, [currentPage, totalPages, isLoadingMore])
 
   const deletePost = async (postId: string) => {
     try {
@@ -92,70 +137,80 @@ const Community: React.FC = () => {
     }
   }
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true)
-    await fetchPosts()
-    setRefreshing(false)
-  }, [fetchPosts])
-
   const renderPost = ({ item }: { item: Post }) => {
-
     return (
-        <View
-          key={item._id}
-          className="rounded-xl p-4 mb-4 bg-white"
-        >
-          <TouchableOpacity onPress={() => router.push(`/community/post/${item?._id}`)} className="flex-row justify-between items-start">
-            <View className="flex justify-center mr-4">
-              <Text className="text-lg font-semibold text-gray-900 mb-1">{item.title}</Text>
-              <Text className="text-sm text-gray-600" numberOfLines={2}>
-                {item.content}
+      <View key={item._id} className="rounded-xl p-4 mb-4 bg-white border border-gray-200">
+      <TouchableOpacity
+        onPress={() => router.push(`/community/post/${item?._id}`)}
+        className="flex-row justify-between items-start"
+      >
+        <View className="flex-1 mr-4">
+          <Text className="text-lg font-semibold text-gray-900 mb-1">{item.title}</Text>
+          <Text className="text-sm text-gray-600" numberOfLines={2}>
+            {item.content}
+          </Text>
+          <View className="flex-row items-center mt-2">
+            <View className={`rounded-full px-2 py-1 ${item.type === "Help" ? "bg-red-100" : "bg-green-100"}`}>
+              <Text className={`text-xs ${item.type === "Help" ? "text-red-600" : "text-green-600"}`}>
+                {item.type}
               </Text>
             </View>
-            
-            <View className="my-auto items-center flex-row gap-5">
-              <View>
-                  <View className={`rounded-full p-3 ${item.type === "Help" ? "bg-red-100" : "bg-green-100"}`}>
-                    <AntDesign name="tagso" size={20} color={item.type === "Help" ? "red" : "green"} />
-                  </View>
-                  
-                  <Text className="text-xs text-gray-600 mt-1">{item.type}</Text>
-                  </View>
-                  <TouchableOpacity
-                  onPress={() => {
-                    setSelectedPost(item);
-                    setIsModalVisible(true);
-                    console.log(item?.userId);
-                  }}
-                  >
-                <Entypo name="dots-three-horizontal" size={15} color="black" />
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
+            <Text className="text-xs text-gray-500 ml-2">2h ago</Text>
+          </View>
         </View>
+        <TouchableOpacity
+          onPress={() => {
+            setSelectedPost(item)
+            setIsModalVisible(true)
+          }}
+          className="p-2"
+        >
+          <Feather name="more-vertical" size={16} color="gray" />
+        </TouchableOpacity>
+        
+      </TouchableOpacity>
+    </View>
     )
   };
   
+  const renderFooter = () => {
+    return isLoadingMore ? (
+      <View className="p-4 justify-center items-center">
+        <Text className="text-gray-500">Loading more posts...</Text>
+      </View>
+    ) : null
+  }
 
   return (
-    <SafeAreaView style={{ flex: 1, paddingTop: insets.top }} className="bg-green-50">
-
-    <Modal
+    <SafeAreaView style={{ flex: 1, paddingTop: insets.top }} className="bg-white">
+      <Modal
         animationType="slide"
         transparent={true}
         visible={isModalVisible}
         onRequestClose={() => setIsModalVisible(false)}
       >
-        <View className="flex-1 justify-end">
-          <View className="bg-white rounded-t-3xl p-6">
-            <Text className="text-xl font-semibold mb-4">Post Options</Text>
+        <View className="flex-1 justify-end bg-black/40">
+          <View className="bg-white rounded-t-3xl p-6 shadow-2xl">
+            <View className="w-16 h-1 bg-gray-300 self-center rounded-full mb-4"></View>
+            
+            <Text className="text-xl font-bold text-gray-800 text-center mb-6">Post Options</Text>
+            
             {selectedPost && selectedPost?.userId === userId && (
-              <TouchableOpacity onPress={() => deletePost(selectedPost._id)} className="py-3 border-b border-gray-200">
-                <Text className="text-red-500">Delete Post</Text>
-              </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => deletePost(selectedPost._id)} 
+                  className="py-4 flex-row items-center justify-center border-b border-gray-100"
+                >
+                  <Feather name="trash-2" size={20} color="red" className="mr-3" />
+                  <Text className="text-red-500 text-base font-semibold">Delete Post</Text>
+                </TouchableOpacity>
             )}
-            <TouchableOpacity onPress={() => setIsModalVisible(false)} className="py-3">
-              <Text className="text-blue-500">Cancel</Text>
+            
+            <TouchableOpacity 
+              onPress={() => setIsModalVisible(false)} 
+              className="py-4 flex-row items-center justify-center"
+            >
+              <Feather name="x" size={20} color="blue" className="mr-3" />
+              <Text className="text-blue-500 text-base font-semibold">Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -166,11 +221,12 @@ const Community: React.FC = () => {
           <Text className="text-base text-gray-600 mt-2">Connect, share, and grow with fellow gardeners.</Text>
         </View>
 
-        <View className="flex-row items-center bg-white rounded-full border border-gray-200 mb-4">
+        <View className="flex-row items-center bg-gray-100 rounded-full mb-4">
           <Ionicons name="search" size={20} color="gray" style={{ marginLeft: 12 }} />
           <TextInput
             className="flex-1 p-3 pl-2"
             placeholder="Search posts..."
+            placeholderTextColor={"#636363"}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -181,6 +237,9 @@ const Community: React.FC = () => {
           keyExtractor={(item) => item._id}
           renderItem={renderPost}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          onEndReached={loadMorePosts}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
           ListEmptyComponent={
             <View className="flex-1 justify-center items-center py-10">
               <Ionicons name="leaf-outline" size={48} color="gray" />
@@ -192,13 +251,8 @@ const Community: React.FC = () => {
           }
         />
 
-        <View className="absolute bottom-20 right-4 left-4">
-          <CustomButton
-            title="Create Post"
-            bgVariant="plant"
-            onPress={() => router.push("/community/create")}
-            // icon={<AntDesign name="plus" size={20} color="white" style={{ marginRight: 8 }} />}
-          />
+        <View className="absolute bottom-20 right-4">
+            <AntDesign name="pluscircle" size={40} color="green" onPress={() => router.push("/community/create")} />
         </View>
       </View>
     </SafeAreaView>
@@ -206,4 +260,3 @@ const Community: React.FC = () => {
 }
 
 export default Community
-
