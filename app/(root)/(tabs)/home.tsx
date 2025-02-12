@@ -76,10 +76,10 @@ export default function HomePage() {
           />
 
           <FeatureCard
-            icon="camera-outline"
-            title="Disease Detection"
-            description="Upload photos to diagnose plant issues"
-            onPress={() => {}}
+            icon="leaf-outline"
+            title="Fertilizer calculator"
+            description="Get fertilizer requirements for your land"
+            onPress={() => {router.push("/(root)/fertilizer")}}
           />
 
           <FeatureCard

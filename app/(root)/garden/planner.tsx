@@ -6,10 +6,12 @@ import CustomButton from "@/components/Button";
 import { MotiView } from "moti";
 import { router } from "expo-router";
 import { useGardenStore } from "@/store";
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { Ionicons } from "@expo/vector-icons";
 
 const Planner = () => {
   const { width, height, unit, squareArea, soilType, setGardenData } = useGardenStore();
-
+  const insets = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -22,6 +24,13 @@ const Planner = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-green-50">
+      {/* <TouchableOpacity
+        onPress={() => router.back()}
+        className="z-3 absolute top-4 bg-white rounded-full p-2 shadow-md"
+        style={{ marginTop: insets.top }}
+      >
+        <Ionicons name="arrow-back" size={24} color="#4CAF50" />
+      </TouchableOpacity> */}
       <MotiView
         from={{ opacity: 0, translateY: -50 }}
         animate={{ opacity: 1, translateY: 0 }}
@@ -29,7 +38,7 @@ const Planner = () => {
         style={styles.header}
         className="bg-green-100 p-4"
       >
-        <Text style={styles.title}>Plan your Garden</Text>
+        <Text className="text-green-700 font-bold text-3xl">Plan your Garden</Text>
       </MotiView>
 
       <Animated.View style={[styles.formContainer, { opacity: fadeAnim }]}>

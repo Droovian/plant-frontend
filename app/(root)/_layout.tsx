@@ -12,6 +12,7 @@ const Layout = () => {
                 }
             } 
             />
+            <Stack.Screen name="fertilizer" options={{ headerShown: false }} />
         </Stack>
     );
 }
