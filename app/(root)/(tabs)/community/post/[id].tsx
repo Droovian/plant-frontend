@@ -213,7 +213,7 @@ const PostDetail = () => {
             >
               <View className="flex-row items-center p-3">
                 <Ionicons name="person-circle-outline" size={24} color="black"  />
-                <Text className="text-gray-600 text-sm font-semibold ml-8">{comment.text}</Text>
+                <Text className="text-gray-600 text-sm font-semibold ml-2">{comment.text}</Text>
                 <Text className="text-xs text-gray-500 ml-auto">
                   {new Date(comment.createdAt).toLocaleDateString()}
                 </Text>
