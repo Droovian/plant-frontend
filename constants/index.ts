@@ -26,11 +26,16 @@ import selectedMarker from "@/assets/icons/selected-marker.png";
 import star from "@/assets/icons/star.png";
 import target from "@/assets/icons/target.png";
 import to from "@/assets/icons/to.png";
+import farm from "@/assets/images/farm.png";
 
 export const images = {
     onboarding1: plant1,
     onboarding2: plant2,
     onboarding3: plant3,
+}
+
+export const AI_GEN_IMAGES = {
+  farmer: farm,
 }
 
 export const icons = {
