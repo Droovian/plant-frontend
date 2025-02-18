@@ -23,14 +23,14 @@ const Planner = () => {
   }, []);
 
   return (
-    <SafeAreaView className="flex-1 bg-green-50">
-      {/* <TouchableOpacity
+    <SafeAreaView className="flex-1 bg-green-50" style={{ paddingTop: insets.top }}>
+       <TouchableOpacity
         onPress={() => router.back()}
-        className="z-3 absolute top-4 bg-white rounded-full p-2 shadow-md"
+        className="absolute top-4 left-4 bg-white rounded-full p-3 shadow-lg"
         style={{ marginTop: insets.top }}
       >
-        <Ionicons name="arrow-back" size={24} color="#4CAF50" />
-      </TouchableOpacity> */}
+        <Ionicons name="arrow-back" size={24} color="#16a34a" />
+      </TouchableOpacity>
       <MotiView
         from={{ opacity: 0, translateY: -50 }}
         animate={{ opacity: 1, translateY: 0 }}

@@ -5,7 +5,8 @@ export type Crop = {
         N: number;
         P: number;
         K: number;
-    }
+    };
+    imageUrl?: string;
 }
 
 export type Fertilizer = {

@@ -1,64 +1,158 @@
-import { useState } from "react"
-import { View, Text, Image, TouchableOpacity, FlatList } from "react-native"
+import React, { useState } from "react"
+import { View, Text, Image, TouchableOpacity, FlatList, Modal, SafeAreaView } from "react-native"
 import { StatusBar } from "expo-status-bar"
+import { X, Check, AlertCircle } from "lucide-react-native"
+import { Crop } from "@/types/plant"
+import { BlurView } from "expo-blur"
 
-const plants = [
-  { id: 1, name: "Tomato", image: "/placeholder.svg?height=100&width=100" },
-  { id: 2, name: "Basil", image: "/placeholder.svg?height=100&width=100" },
-  { id: 3, name: "Rosemary", image: "/placeholder.svg?height=100&width=100" },
-  { id: 4, name: "Lavender", image: "/placeholder.svg?height=100&width=100" },
-  { id: 5, name: "Mint", image: "/placeholder.svg?height=100&width=100" },
-  { id: 6, name: "Cucumber", image: "/placeholder.svg?height=100&width=100" },
-  { id: 7, name: "Strawberry", image: "/placeholder.svg?height=100&width=100" },
-  { id: 8, name: "Pepper", image: "/placeholder.svg?height=100&width=100" },
-  { id: 9, name: "Lettuce", image: "/placeholder.svg?height=100&width=100" },
-  { id: 10, name: "Carrot", image: "/placeholder.svg?height=100&width=100" },
-  { id: 11, name: "Spinach", image: "/placeholder.svg?height=100&width=100" },
-  { id: 12, name: "Cilantro", image: "/placeholder.svg?height=100&width=100" },
+const plants: Crop[] = [
+  { id: "wheat", name: "Wheat", npkRequirement: { N: 120, P: 60, K: 40 } },
+  { id: "rice", name: "Rice", npkRequirement: { N: 100, P: 50, K: 50 } },
+  { id: "maize", name: "Maize", npkRequirement: { N: 150, P: 75, K: 50 } },
+  { id: "tomato", name: "Tomato", npkRequirement: { N: 90, P: 45, K: 60 } },
+  { id: "potato", name: "Potato", npkRequirement: { N: 120, P: 50, K: 150 } },
+  { id: "brinjal", name: "Brinjal (Eggplant)", npkRequirement: { N: 100, P: 50, K: 50 } },
+  { id: "chili", name: "Chili", npkRequirement: { N: 80, P: 40, K: 60 } },
+  { id: "cucumber", name: "Cucumber", npkRequirement: { N: 100, P: 50, K: 50 } },
+  { id: "pumpkin", name: "Pumpkin", npkRequirement: { N: 100, P: 50, K: 50 } },
+  { id: "bittergourd", name: "Bittergourd", npkRequirement: { N: 100, P: 50, K: 50 } },
 ]
 
-export default function PlantSelectionScreen() {
-  const [selectedPlants, setSelectedPlants] = useState<number[]>([])
+export default function PlantSelectionScreen({ onComplete }: { onComplete: (plants: Crop[]) => Promise<void> }) {
+  const [selectedPlants, setSelectedPlants] = useState<Crop[]>([])
+  const [modalVisible, setModalVisible] = useState(true)
 
-  const togglePlantSelection = (plantId: number) => {
-    setSelectedPlants((prev) => (prev.includes(plantId) ? prev.filter((id) => id !== plantId) : [...prev, plantId]))
+  const togglePlantSelection = (plant: Crop) => {
+    setSelectedPlants((prevSelected) =>
+      prevSelected.includes(plant)
+        ? prevSelected.filter((p) => p.id !== plant.id)
+        : prevSelected.length < 5
+        ? [...prevSelected, plant]
+        : prevSelected
+    )
   }
 
-  const renderPlantItem = ({ item }: { item: (typeof plants)[0] }) => (
-    <TouchableOpacity
-      onPress={() => togglePlantSelection(item.id)}
-      className={`w-1/3 p-2 items-center ${selectedPlants.includes(item.id) ? "bg-green-200" : "bg-white"}`}
-    >
-      <Image source={{ uri: item.image }} className="w-20 h-20 rounded-full" />
-      <Text className="mt-2 text-center font-semibold">{item.name}</Text>
-    </TouchableOpacity>
-  )
+  const handleComplete = () => {
+    onComplete(selectedPlants)
+    setModalVisible(false)
+  }
+
+  const PlantCard = ({ item }: { item: Crop }) => {
+    const isSelected = selectedPlants.includes(item)
+    return (
+      <TouchableOpacity
+        onPress={() => togglePlantSelection(item)}
+        className="items-center m-2"
+      >
+        <View
+          className={`w-28 h-32 rounded-2xl ${
+            isSelected ? "bg-green-50" : "bg-white"
+          } shadow-lg overflow-hidden`}
+        >
+          <View className="h-24 w-full bg-gray-100 rounded-t-2xl overflow-hidden">
+            <Image
+              source={{ uri: item.imageUrl }}
+              className="w-full h-full"
+            />
+            {isSelected && (
+              <BlurView
+                intensity={70}
+                className="absolute inset-0 items-center justify-center"
+              >
+                <View className="bg-green-600 rounded-full p-2">
+                  <Check color="white" size={20} />
+                </View>
+              </BlurView>
+            )}
+          </View>
+          <View className="p-1">
+            <Text className="text-center text-sm font-medium text-gray-800" numberOfLines={1}>
+              {item.name}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    )
+  }
 
   return (
-    <View className="flex-1 bg-gray-100">
-      <StatusBar style="auto" />
-      <View className="p-6 bg-white">
-        <Text className="text-2xl font-bold text-center">Choose Your Plants</Text>
-        <Text className="text-base text-center mt-2">Select at least 5 plants to get started</Text>
-      </View>
-      <FlatList
-        data={plants}
-        renderItem={renderPlantItem}
-        keyExtractor={(item) => item.id.toString()}
-        numColumns={3}
-        className="flex-1"
-      />
-      <View className="p-6">
-        <TouchableOpacity
-          className={`py-3 px-6 rounded-full ${selectedPlants.length >= 5 ? "bg-green-500" : "bg-gray-300"}`}
-          disabled={selectedPlants.length < 5}
-        >
-          <Text className="text-white text-center font-semibold">
-            {selectedPlants.length >= 5 ? "Continue" : `Select ${5 - selectedPlants.length} more`}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    <Modal
+      animationType="slide"
+      transparent={false}
+      visible={modalVisible}
+      onRequestClose={() => setModalVisible(false)}
+    >
+      <SafeAreaView className="flex-1 bg-white">
+        <StatusBar style="dark" />
+        <View className="flex-1 px-4 pt-2">
+          {/* Header */}
+          <View className="flex-row justify-between items-center py-4 border-b border-gray-100">
+            <View>
+              <Text className="text-2xl font-bold text-gray-800">Select Plants</Text>
+              <Text className="text-sm text-gray-500 mt-1">Choose up to 5 plants for your garden</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setModalVisible(false)}
+              className="h-10 w-10 items-center justify-center rounded-full bg-gray-100"
+            >
+              <X color="#374151" size={20} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Selection Progress */}
+          <View className="py-4 flex-row items-center justify-between">
+            <View className="flex-row items-center">
+              <Text className="text-lg font-semibold text-gray-800">
+                {selectedPlants.length}/5 Selected
+              </Text>
+              {selectedPlants.length === 5 && (
+                <View className="ml-2 px-3 py-1 bg-green-100 rounded-full">
+                  <Text className="text-green-700 text-sm font-medium">Ready!</Text>
+                </View>
+              )}
+            </View>
+            {selectedPlants.length === 0 && (
+              <View className="flex-row items-center">
+                <AlertCircle size={16} color="#6B7280" className="mr-1" />
+                <Text className="text-gray-500 text-sm">Select at least 5 plants</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Plant Grid */}
+          <FlatList
+            data={plants}
+            renderItem={({ item }) => <PlantCard item={item} />}
+            numColumns={3}
+            showsVerticalScrollIndicator={false}
+            className="flex-1"
+            contentContainerStyle={{ paddingVertical: 8 }}
+          />
+
+          {/* Action Button */}
+          <View className="py-4 px-4 border-t border-gray-100">
+            <TouchableOpacity
+              onPress={handleComplete}
+              disabled={selectedPlants.length < 5}
+              className={`py-4 rounded-xl ${
+                selectedPlants.length === 5
+                  ? "bg-green-600"
+                  : "bg-gray-200"
+              }`}
+            >
+              <Text
+                className={`text-center font-bold text-lg ${
+                  selectedPlants.length === 5 ? "text-white" : "text-gray-400"
+                }`}
+              >
+                {selectedPlants.length === 5
+                  ? "Continue to Garden"
+                  : `Select ${5 - selectedPlants.length} more plants`}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    </Modal>
   )
 }
-
