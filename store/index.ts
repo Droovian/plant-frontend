@@ -12,22 +12,29 @@ type LocationStore = {
 
 
 type GardenState = {
-  width: string;
-  height: string;
-  unit: string;
-  squareArea: string;
-  soilType: string;
-  setGardenData: (key: keyof GardenState, value: string) => void;
-};
-
-export const useGardenStore = create<GardenState>((set) => ({
-  width: "",
-  height: "",
-  unit: "feet",
-  squareArea: "",
-  soilType: "",
-  setGardenData: (key, value) => set((state) => ({ ...state, [key]: value })),
-}));
+    width: string;
+    height: string;
+    unit: string;
+    squareArea: string;
+    soilType: string;
+    sunlightExposure: string;
+    soilPH?: string;
+    soilNutrientLevel?: string;
+    setGardenData: (key: keyof GardenState, value: string) => void;
+  };
+  
+  export const useGardenStore = create<GardenState>((set) => ({
+    width: "",
+    height: "",
+    unit: "feet",
+    squareArea: "",
+    soilType: "",
+    sunlightExposure: "",
+    soilPH: "",
+    soilNutrientLevel: "",
+    setGardenData: (key, value) => set((state) => ({ ...state, [key]: value })),
+  }));
+  
 
 
 const useLocationStore = create<LocationStore>((set) => ({

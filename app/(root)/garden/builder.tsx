@@ -19,7 +19,7 @@ const vegetables = [
 ]
 
 const Builder = () => {
-  const { width, height, unit, squareArea, soilType } = useGardenStore()
+  const { width, height, unit, squareArea, soilType, sunlightExposure, soilPH, soilNutrientLevel } = useGardenStore()
   const [grid, setGrid] = useState<string[][]>([])
   const [selectedVegetable, setSelectedVegetable] = useState<string | null>(null)
 
