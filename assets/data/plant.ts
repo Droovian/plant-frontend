@@ -1,4 +1,4 @@
-import { Fertilizer, Crop } from "@/types/plant";
+import { Fertilizer, Crop, compatibilityInfo } from "@/types/plant";
 
 const fertilizers: Fertilizer[] = [
     {
@@ -66,5 +66,167 @@ const fertilizers: Fertilizer[] = [
       }
   ];
   
-  export { fertilizers, crops };
+  const compatibility: compatibilityInfo[] = [
+    {
+      "Asparagus": {
+        "companions": ["Tomato", "Parsley", "Basil", "Nasturtium"],
+        "avoid": ["Garlic", "Onion", "Potato"]
+      },
+      "Bean": {
+        "companions": ["Carrot", "Corn", "Cucumber", "Pea", "Radish", "Cabbage", "Cauliflower"],
+        "avoid": ["Garlic", "Onion", "Chive", "Leek"]
+      },
+      "Beet": {
+        "companions": ["Bush Bean", "Lettuce", "Onion", "Sage", "Brassica"],
+        "avoid": ["Pole Bean"]
+      },
+      "Cabbage": {
+        "companions": ["Celery", "Dill", "Onion", "Potato", "Beet", "Sage"],
+        "avoid": ["Strawberry", "Tomato"]
+      },
+      "Carrot": {
+        "companions": ["Bean", "Lettuce", "Onion", "Pea", "Radish", "Tomato"],
+        "avoid": ["Dill"]
+      },
+      "Corn": {
+        "companions": ["Bean", "Cucumber", "Pea", "Pumpkin", "Squash"],
+        "avoid": ["Tomato"]
+      },
+      "Cucumber": {
+        "companions": ["Bean", "Corn", "Pea", "Radish"],
+        "avoid": ["Aromatic Herb", "Potato"]
+      },
+      "Lettuce": {
+        "companions": ["Carrot", "Cucumber", "Radish", "Strawberry"],
+        "avoid": ["Broccoli", "Cabbage"]
+      },
+      "Onion": {
+        "companions": ["Beet", "Carrot", "Lettuce", "Strawberry", "Tomato"],
+        "avoid": ["Bean", "Pea"]
+      },
+      "Pea": {
+        "companions": ["Carrot", "Corn", "Cucumber", "Radish"],
+        "avoid": ["Garlic", "Onion"]
+      },
+      "Potato": {
+        "companions": ["Bean", "Cabbage", "Corn", "Pea"],
+        "avoid": ["Cucumber", "Tomato"]
+      },
+      "Radish": {
+        "companions": ["Carrot", "Cucumber", "Lettuce", "Pea", "Spinach"],
+        "avoid": ["Hyssop"]
+      },
+      "Spinach": {
+        "companions": ["Bean", "Carrot", "Strawberry"]
+      },
+      "Tomato": {
+        "companions": ["Basil", "Carrot", "Onion", "Parsley"],
+        "avoid": ["Cabbage", "Corn", "Potato"]
+      },
+      "Okra": {
+        "companions": ["Pepper", "Cucumber", "Melon", "Eggplant"]
+      },
+      "Cauliflower": {
+        "companions": ["Bean", "Celery", "Onion"],
+        "avoid": ["Strawberry", "Tomato"]
+      },
+      "Pumpkin": {
+        "companions": ["Corn", "Bean"],
+        "avoid": ["Potato"]
+      },
+      "Chilli": {
+        "companions": ["Basil", "Carrot", "Onion", "Parsley"],
+        "avoid": ["Cabbage", "Fennel"]
+      },
+      "Cowpea": {
+        "companions": ["Corn", "Sorghum"]
+      },
+      "Basil": {
+        "companions": ["Tomato", "Pepper", "Oregano", "Asparagus"],
+        "avoid": ["Rue"]
+      },
+      "Broccoli": {
+        "companions": ["Celery", "Onion", "Potato", "Dill"],
+        "avoid": ["Strawberry", "Tomato"]
+      },
+      "Brussels Sprout": {
+        "companions": ["Celery", "Onion", "Potato", "Dill"],
+        "avoid": ["Strawberry", "Tomato"]
+      },
+      "Celery": {
+        "companions": ["Bean", "Leek", "Cabbage", "Tomato"],
+        "avoid": ["Corn"]
+      },
+      "Chive": {
+        "companions": ["Carrot", "Tomato", "Rose", "Grape"],
+        "avoid": ["Bean", "Pea"]
+      },
+      "Eggplant": {
+        "companions": ["Bean", "Pepper", "Potato", "Tomato"],
+        "avoid": ["Fennel"]
+      },
+      "Garlic": {
+        "companions": ["Tomato", "Cucumber", "Pea", "Lettuce"],
+        "avoid": ["Bean", "Pea"]
+      },
+      "Kale": {
+        "companions": ["Bean", "Celery", "Onion", "Potato"],
+        "avoid": ["Strawberry", "Tomato"]
+      },
+      "Leek": {
+        "companions": ["Carrot", "Celery", "Onion"],
+        "avoid": ["Bean", "Pea"]
+      },
+      "Marigold": {
+        "companions": ["Tomato", "Pepper", "Potato", "Rose"]
+      },
+      "Mint": {
+        "companions": ["Cabbage", "Tomato", "Pea", "Broccoli"],
+        "avoid": ["Parsley"]
+      },
+      "Parsley": {
+        "companions": ["Tomato", "Asparagus", "Carrot", "Chive"],
+        "avoid": ["Lettuce"]
+      },
+      "Pepper": {
+        "companions": ["Basil", "Tomato", "Onion", "Spinach"],
+        "avoid": ["Fennel"]
+      },
+      "Rosemary": {
+        "companions": ["Bean", "Cabbage", "Carrot", "Sage"],
+        "avoid": ["Potato"]
+      },
+      "Sage": {
+        "companions": ["Rosemary", "Cabbage", "Carrot", "Strawberry"],
+        "avoid": ["Cucumber"]
+      },
+      "Strawberry": {
+        "companions": ["Borage", "Lettuce", "Spinach", "Sage"],
+        "avoid": ["Cabbage", "Broccoli"]
+      },
+      "Sunflower": {
+        "companions": ["Corn", "Cucumber", "Melon"],
+        "avoid": ["Potato", "Bean"]
+      },
+      "Thyme": {
+        "companions": ["Cabbage", "Rose", "Strawberry", "Tomato"]
+      },
+      "Turnip": {
+        "companions": ["Pea", "Cabbage"],
+        "avoid": ["Potato"]
+      },
+      "Melon": {
+        "companions": ["Corn", "Radish", "Marigold"],
+        "avoid": ["Potato"]
+      },
+      "Zucchini": {
+        "companions": ["Bean", "Dill", "Oregano", "Parsley", "Pepper", "Radish"],
+        "avoid": ["Potato", "Pumpkin"]
+      }
+    }
+  ];
+
+
+
+  export { fertilizers, crops, compatibility };
   

@@ -27,6 +27,10 @@ import star from "@/assets/icons/star.png";
 import target from "@/assets/icons/target.png";
 import to from "@/assets/icons/to.png";
 import farm from "@/assets/images/farm.png";
+import Okra from "@/assets/images/okra.png";
+import Tomato from "@/assets/images/tomato.png";
+import Chilli from "@/assets/images/chilli.png";
+import Eggplant from "@/assets/images/eggplant.png";
 
 export const images = {
     onboarding1: plant1,
@@ -36,6 +40,13 @@ export const images = {
 
 export const AI_GEN_IMAGES = {
   farmer: farm,
+}
+
+export const plantImages = {
+  okra: Okra,
+  tomato: Tomato,
+  chilli: Chilli,
+  Eggplant: Eggplant,
 }
 
 export const icons = {

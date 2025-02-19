@@ -20,3 +20,10 @@ export type Fertilizer = {
     costPerBag: number;
     bagWeightKg: number;
 }
+
+export type compatibilityInfo = {
+    [plantName: string]: {
+        companions?: string[];
+        avoid?: string[];
+    }
+}
