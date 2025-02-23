@@ -14,7 +14,7 @@ type LocationStore = {
 type GardenState = {
     width: string;
     height: string;
-    unit: string;
+    unit: "feet" | "meters";
     squareArea: string;
     soilType: string;
     sunlightExposure: string;
