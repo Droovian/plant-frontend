@@ -1,4 +1,5 @@
 import { Fertilizer, Crop, compatibilityInfo } from "@/types/plant";
+import { plantImages } from "@/constants";
 
 const fertilizers: Fertilizer[] = [
     {
@@ -66,6 +67,57 @@ const fertilizers: Fertilizer[] = [
       }
   ];
   
+  const vegetables = [
+    {
+        name: "Okra",
+        image: plantImages.okra,
+        color: "#A8E6CE",
+        noOfSquares: 1,
+        noCount: 4,
+        spacingFeet: 2,
+        soilPH: [6.0, 7.0],
+        sunlight: "Full Sun",
+        soilType: ["Loamy"],
+        nutrientLevel: "Moderate",
+      },
+      {
+        name: "Tomato",
+        image: plantImages.tomato,
+        color: "#FFB3B3",
+        noOfSquares: 1,
+        noCount: 1,
+        spacingFeet: 3,
+        soilPH: [6.0, 6.8],
+        sunlight: "Full Sun",
+        soilType: ["Loamy", "Sandy"],
+        nutrientLevel: "High",
+      },
+      {
+        name: "Chilli",
+        image: plantImages.chilli,
+        color: "#FFDBA4",
+        noOfSquares: 4,
+        noCount: 4,
+        spacingFeet: 1,
+        soilPH: [5.5, 7.0],
+        sunlight: "Full Sun",
+        soilType: ["Loamy", "Sandy"],
+        nutrientLevel: "Moderate",
+      },
+      {
+        name: "Eggplant",
+        image: plantImages.Eggplant,
+        color: "#D4B8E2",
+        noOfSquares: 1,
+        noCount: 3,
+        spacingFeet: 2,
+        soilPH: [5.5, 6.5],
+        sunlight: "Full Sun",
+        soilType: ["Loamy"],
+        nutrientLevel: "Moderate",
+      },
+  ]
+
   const compatibility: compatibilityInfo[] = [
     {
       "Asparagus": {
@@ -136,7 +188,7 @@ const fertilizers: Fertilizer[] = [
       },
       "Chilli": {
         "companions": ["Basil", "Carrot", "Onion", "Parsley"],
-        "avoid": ["Cabbage", "Fennel"]
+        "avoid": ["Cabbage", "Fennel", "Okra"]
       },
       "Cowpea": {
         "companions": ["Corn", "Sorghum"]
@@ -228,5 +280,5 @@ const fertilizers: Fertilizer[] = [
 
 
 
-  export { fertilizers, crops, compatibility };
+  export { fertilizers, crops, compatibility, vegetables };
   
