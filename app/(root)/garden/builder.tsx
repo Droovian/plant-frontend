@@ -7,7 +7,7 @@ import { useGardenStore } from "@/store";
 import { vegetables } from "@/assets/data/plant";
 import { compatibility } from "@/assets/data/plant";
 import { StyleSheet } from "react-native";
-
+import { Audio } from "expo-av";
 const BASE_CELL_SIZE = Dimensions.get("window").width < 375 ? 40 : 48;
 
 interface TooltipState {
@@ -19,7 +19,9 @@ interface TooltipState {
 
 const Builder = () => {
   const { width, height } = useGardenStore();
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [grid, setGrid] = useState<string[][]>([]);
+  const [hasIncompatible, setHasIncompatible] = useState<boolean>(false);
   const gridContainerRef = useRef<View>(null);
   const [tooltip, setTooltip] = useState<TooltipState>({
     visible: false,
@@ -38,11 +40,35 @@ const Builder = () => {
     (Dimensions.get("window").height / 2) / Math.min(gridHeight, maxCells)
   );
 
+  async function playSound() {
+    if (sound) {
+      await sound.unloadAsync(); // Unload any existing sound instance
+    }
+    const { sound: newSound } = await Audio.Sound.createAsync(require('@/assets/audio/error.mp3'));
+    setSound(newSound);
+    await newSound.playAsync();
+
+    // Stop and unload after 1 second
+    setTimeout(async () => {
+      await newSound.stopAsync();
+      await newSound.unloadAsync();
+      setSound(null);
+    }, 1000);
+  }
+
   useEffect(() => {
     const cappedWidth = Math.min(gridWidth, maxCells);
     const cappedHeight = Math.min(gridHeight, maxCells);
     setGrid(Array(cappedHeight).fill(null).map(() => Array(cappedWidth).fill("")));
   }, [width, height]);
+
+  useEffect(() => {
+    if (hasIncompatible) {
+      playSound();
+      // Reset the flag after playing the sound (optional, depending on your needs)
+      setHasIncompatible(false);
+    }
+  }, [hasIncompatible]);
 
   const canPlacePlant = (row: number, col: number, vegetable: string): boolean => {
     // You can implement additional placement validation logic here
@@ -51,7 +77,7 @@ const Builder = () => {
 
   const getBorderStyle = (row: number, col: number, vegetable: string) => {
     const compInfo = compatibility[0][vegetable] || { companions: [], avoid: [] };
-    // Include all 8 directions (4 cardinal + 4 diagonal)
+    
     const directions = [
       [-1, 0], [1, 0], [0, -1], [0, 1],  // Cardinal directions
       [-1, -1], [-1, 1], [1, -1], [1, 1]  // Diagonal directions
@@ -113,6 +139,11 @@ const Builder = () => {
     if(canPlacePlant(rowIndex, colIndex, selectedVegetable)){
       newGrid[rowIndex][colIndex] = selectedVegetable;
       setGrid(newGrid);
+
+      const { shouldAvoid } = getBorderStyle(rowIndex, colIndex, selectedVegetable);
+      if (shouldAvoid) {
+        setHasIncompatible(true);
+      }
     } else {
       console.log("Cannot place plant", selectedVegetable);
     }
@@ -169,11 +200,11 @@ const Builder = () => {
               <View key={rowIndex} className="flex-row">
                 {row.map((cell, colIndex) => {
                   const { isCompanion, shouldAvoid, incompatiblePlants } = cell ? getBorderStyle(rowIndex, colIndex, cell) : { isCompanion: false, shouldAvoid: false, incompatiblePlants: [] };
-        
+                  
                   return (
                     <TouchableOpacity
                       key={colIndex}
-                      className={`m-0.5 border ${cell ? "bg-opacity-20" : "bg-green-50"} ${
+                      className={`border ${cell ? "bg-opacity-20" : "bg-green-50"} ${
                         isCompanion ? "border-green-500" : shouldAvoid ? "border-red-500" : "border-gray-400"
                       }`}
                       style={{
