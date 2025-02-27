@@ -73,50 +73,208 @@ const fertilizers: Fertilizer[] = [
         image: plantImages.okra,
         color: "#A8E6CE",
         noOfSquares: 1,
-        noCount: 4,
-        spacingFeet: 2,
-        soilPH: [6.0, 7.0],
+        noCount: 1, // Okra typically requires more space, so it's usually 1 plant per square foot.
+        spacingFeet: 3, // Traditional spacing is about 3 feet apart.
+        soilPH: [5.8, 7.0],
         sunlight: "Full Sun",
-        soilType: ["Loamy"],
+        soilType: ["Loamy", "Sandy"],
         nutrientLevel: "Moderate",
-      },
-      {
+    },
+    {
         name: "Tomato",
         image: plantImages.tomato,
         color: "#FFB3B3",
         noOfSquares: 1,
-        noCount: 1,
-        spacingFeet: 3,
+        noCount: 1, // Indeterminate tomatoes need about 1 square foot each.
+        spacingFeet: 2, // Traditional spacing is about 2 feet apart.
         soilPH: [6.0, 6.8],
         sunlight: "Full Sun",
         soilType: ["Loamy", "Sandy"],
         nutrientLevel: "High",
-      },
-      {
+    },
+    {
         name: "Chilli",
         image: plantImages.chilli,
         color: "#FFDBA4",
-        noOfSquares: 4,
-        noCount: 4,
-        spacingFeet: 1,
+        noOfSquares: 1,
+        noCount: 4, // Chilli peppers can be planted closer together.
+        spacingFeet: 1, // Traditional spacing is about 1 foot apart.
         soilPH: [5.5, 7.0],
         sunlight: "Full Sun",
         soilType: ["Loamy", "Sandy"],
         nutrientLevel: "Moderate",
-      },
-      {
+    },
+    {
+        name: "Drumstick",
+        image: plantImages.Drumstick,
+        color: "#8BC34A",
+        noOfSquares: 1,
+        noCount: 1, // Typically one plant per square foot.
+        spacingFeet: 6, // Traditional spacing is about 6 feet apart.
+        soilPH: [6.0, 7.0],
+        sunlight: "Full Sun",
+        soilType: ["Well-drained"],
+        nutrientLevel: "Moderate",
+    },
+    {
+        name: "Pumpkin",
+        image: plantImages.Pumpkin,
+        color: "#FFC107",
+        noOfSquares: 4, // Requires more space due to spreading vines.
+        noCount: 1, // Typically one plant per planting area.
+        spacingFeet: 5, // Traditional spacing is about 5 feet apart.
+        soilPH: [6.0, 6.8],
+        sunlight: "Full Sun",
+        soilType: ["Well-drained"],
+        nutrientLevel: "High",
+    },
+    {
+        name: "Breadfruit",
+        image: plantImages.Breadfruit,
+        color: "#F7DC6F",
+        noOfSquares: 4, // Requires more space due to tree size.
+        noCount: 1, // Typically one tree per planting area.
+        spacingFeet: 20, // Traditional spacing is about 20 feet apart.
+        soilPH: [5.5, 7.0],
+        sunlight: "Full Sun",
+        soilType: ["Well-drained"],
+        nutrientLevel: "Moderate",
+    },
+    {
+        name: "Radish",
+        image: plantImages.Radish,
+        color: "#FF69B4",
+        noOfSquares: 1,
+        noCount: 16, // Can be densely planted.
+        spacingFeet: 0.5, // Traditional spacing is about 0.5 feet apart.
+        soilPH: [6.0, 7.0],
+        sunlight: "Full Sun to Partial Shade",
+        soilType: ["Well-drained"],
+        nutrientLevel: "Moderate",
+    },
+    {
         name: "Eggplant",
         image: plantImages.Eggplant,
         color: "#D4B8E2",
         noOfSquares: 1,
-        noCount: 3,
-        spacingFeet: 2,
+        noCount: 1, // Eggplant typically requires about 1 square foot per plant.
+        spacingFeet: 2, // Traditional spacing is about 2 feet apart.
         soilPH: [5.5, 6.5],
         sunlight: "Full Sun",
-        soilType: ["Loamy"],
+        soilType: ["Loamy", "Sandy"],
         nutrientLevel: "Moderate",
-      },
-  ]
+    },
+    {
+        name: "Potato",
+        image: plantImages.Potato,
+        color: "#F0D9FF",
+        noOfSquares: 1,
+        noCount: 4, // Potatoes can be planted with multiple seed potatoes per square foot.
+        spacingFeet: 1, // Traditional spacing is about 1 foot apart.
+        soilPH: [4.8, 6.5],
+        sunlight: "Full Sun",
+        soilType: ["Loamy", "Sandy"],
+        nutrientLevel: "High",
+    },
+    {
+        name: "Asparagus",
+        image: plantImages.Asparagus,
+        color: "#C4E17F",
+        noOfSquares: 2, // Asparagus requires more space due to its spread.
+        noCount: 1, // Typically one crown per planting area.
+        spacingFeet: 1.5, // Traditional spacing is about 1.5 feet apart.
+        soilPH: [6.5, 7.5],
+        sunlight: "Full Sun",
+        soilType: ["Loamy", "Sandy"],
+        nutrientLevel: "High",
+    },
+    {
+        name: "Beet",
+        image: plantImages.Beet,
+        color: "#E57373",
+        noOfSquares: 1,
+        noCount: 16, // Beets can be densely planted.
+        spacingFeet: 0.5, // Traditional spacing is about 0.5 feet apart.
+        soilPH: [6.0, 7.5],
+        sunlight: "Full Sun",
+        soilType: ["Loamy", "Sandy"],
+        nutrientLevel: "Moderate",
+    },
+    {
+        name: "Spinach",
+        image: plantImages.Spinach,
+        color: "#AED581",
+        noOfSquares: 1,
+        noCount: 9, // Spinach can be densely planted.
+        spacingFeet: 0.5, // Traditional spacing is about 0.5 feet apart.
+        soilPH: [6.0, 7.5],
+        sunlight: "Full Sun to Partial Shade",
+        soilType: ["Loamy", "Sandy"],
+        nutrientLevel: "Moderate",
+    },
+    {
+        name: "Corn",
+        image: plantImages.Corn,
+        color: "#FFF176",
+        noOfSquares: 1,
+        noCount: 1, // Corn typically requires about 1 square foot per plant.
+        spacingFeet: 1, // Traditional spacing is about 1 foot apart in blocks.
+        soilPH: [5.8, 7.0],
+        sunlight: "Full Sun",
+        soilType: ["Loamy", "Sandy"],
+        nutrientLevel: "High",
+    },
+    {
+        name: "Cucumber",
+        image: plantImages.Cucumber,
+        color: "#81C784",
+        noOfSquares: 1,
+        noCount: 2, // Cucumbers can be planted with two per square foot if trellised.
+        spacingFeet: 1, // Traditional spacing is about 1 foot apart.
+        soilPH: [5.5, 7.0],
+        sunlight: "Full Sun",
+        soilType: ["Loamy", "Sandy"],
+        nutrientLevel: "High",
+    },
+    {
+        name: "Onion",
+        image: plantImages.Onion,
+        color: "#FFD54F",
+        noOfSquares: 1,
+        noCount: 9, // Onions can be densely planted.
+        spacingFeet: 0.5, // Traditional spacing is about 0.5 feet apart.
+        soilPH: [6.0, 7.0],
+        sunlight: "Full Sun",
+        soilType: ["Loamy", "Sandy"],
+        nutrientLevel: "Moderate",
+    },
+    {
+        name: "Cowpea",
+        image: plantImages.Cowpea,
+        color: "#A1887F",
+        noOfSquares: 1,
+        noCount: 9, // Cowpeas can be densely planted.
+        spacingFeet: 0.5, // Traditional spacing is about 0.5 feet apart.
+        soilPH: [5.5, 6.5],
+        sunlight: "Full Sun",
+        soilType: ["Loamy", "Sandy"],
+        nutrientLevel: "Low",
+    },
+    {
+        name: "Lettuce",
+        image: plantImages.Lettuce,
+        color: "#C5E1A5",
+        noOfSquares: 1, // Lettuce typically requires about 1 square foot.
+        noCount: 4, // Lettuce can be densely planted.
+        spacingFeet: 0.5, // Traditional spacing is about 0.5 feet apart.
+        soilPH: [6.0, 6.8],
+        sunlight: "Full Sun to Partial Shade",
+        soilType: ["Loamy", "Sandy"],
+        nutrientLevel: "Moderate",
+    },
+];
+
+  
 
   const compatibility: compatibilityInfo[] = [
     {

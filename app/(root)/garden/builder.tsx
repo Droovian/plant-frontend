@@ -22,6 +22,7 @@ const Builder = () => {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [grid, setGrid] = useState<string[][]>([]);
   const [hasIncompatible, setHasIncompatible] = useState<boolean>(false);
+  const [placementError, setPlacementError] = useState<string | null>(null);
   const gridContainerRef = useRef<View>(null);
   const [tooltip, setTooltip] = useState<TooltipState>({
     visible: false,
@@ -48,7 +49,6 @@ const Builder = () => {
     setSound(newSound);
     await newSound.playAsync();
 
-    // Stop and unload after 1 second
     setTimeout(async () => {
       await newSound.stopAsync();
       await newSound.unloadAsync();
@@ -65,18 +65,96 @@ const Builder = () => {
   useEffect(() => {
     if (hasIncompatible) {
       playSound();
-      // Reset the flag after playing the sound (optional, depending on your needs)
+      // Reset the flag after playing the sound 
       setHasIncompatible(false);
     }
   }, [hasIncompatible]);
 
   const canPlacePlant = (row: number, col: number, vegetable: string): boolean => {
-    // You can implement additional placement validation logic here
+    const plantInfo = vegetables.find(v => v.name === vegetable);
+    const requiredSquares = plantInfo?.noOfSquares || 1;
+    
+    // Single square plants can be placed anywhere empty
+    if (requiredSquares === 1) {
+      return grid[row][col] === "";
+    }
+    
+    // Find the best pattern for the required squares
+    const pattern = getOptimalPattern(requiredSquares, row, col);
+    
+    // If no valid pattern exists from this position, return false
+    if (!pattern || pattern.length === 0) return false;
+    
+    // Check if all cells in the pattern are available
+    for (const [r, c] of pattern) {
+      if (r < 0 || r >= grid.length || c < 0 || c >= grid[0].length || grid[r][c] !== "") {
+        return false;
+      }
+    }
+    
     return true;
+  };
+
+  const getOptimalPattern = (squaresNeeded: number, startRow: number, startCol: number): [number, number][] => {
+    const pattern: [number, number][] = [];
+    
+    // Priority: try to grow right, then down, then left to create a compact shape
+    
+    const directions = [
+      [0, 0],  // Start position
+      [0, 1],  // Right
+      [1, 0],  // Down
+      [1, 1],  // Down-Right
+      [0, -1], // Left
+      [-1, 0], // Up
+      [-1, 1], // Up-Right
+      [1, -1], // Down-Left
+      [-1, -1] // Up-Left
+    ];
+    
+    // Try to get the most compact shape by starting with the closest cells to origin
+    for (let i = 0; i < directions.length && pattern.length < squaresNeeded; i++) {
+      const [dr, dc] = directions[i];
+      const r = startRow + dr;
+      const c = startCol + dc;
+      
+      // Check if this cell is in bounds and empty
+      if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length && grid[r][c] === "") {
+        // Add to pattern if not already in it
+        if (!pattern.some(([pr, pc]) => pr === r && pc === c)) {
+          pattern.push([r, c]);
+        }
+      }
+    }
+    
+    let distance = 2;
+    while (pattern.length < squaresNeeded && distance < Math.max(grid.length, grid[0].length)) {
+      for (let dr = -distance; dr <= distance; dr++) {
+        for (let dc = -distance; dc <= distance; dc++) {
+          if (pattern.length >= squaresNeeded) break;
+          
+          const r = startRow + dr;
+          const c = startCol + dc;
+          
+          // Only add cells that are on the edge of the current distance
+          if (Math.abs(dr) === distance || Math.abs(dc) === distance) {
+            if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length && grid[r][c] === "") {
+              if (!pattern.some(([pr, pc]) => pr === r && pc === c)) {
+                pattern.push([r, c]);
+              }
+            }
+          }
+        }
+      }
+      distance++;
+    }
+    
+    return pattern.length === squaresNeeded ? pattern : [];
   };
 
   const getBorderStyle = (row: number, col: number, vegetable: string) => {
     const compInfo = compatibility[0][vegetable] || { companions: [], avoid: [] };
+    const vegetableSquareSize = vegetables.find((v) => v.name === vegetable)?.noOfSquares || 1;
     
     const directions = [
       [-1, 0], [1, 0], [0, -1], [0, 1],  // Cardinal directions
@@ -85,6 +163,7 @@ const Builder = () => {
     
     let isCompanion = false;
     let shouldAvoid = false;
+    let takesMoreSquares = (vegetableSquareSize > 1) ? true : false;
     let incompatiblePlants: string[] = [];
 
     for (const [dr, dc] of directions) {
@@ -101,7 +180,7 @@ const Builder = () => {
         }
       }
     }
-    return { isCompanion, shouldAvoid, incompatiblePlants };
+    return { isCompanion, shouldAvoid, incompatiblePlants, takesMoreSquares };
   };
 
   const showTooltip = (rowIndex: number, colIndex: number, incompatiblePlants: string[]) => {
@@ -124,32 +203,42 @@ const Builder = () => {
 
   const handleCellPress = (rowIndex: number, colIndex: number) => {
     const newGrid = grid.map((row) => [...row]);
-
-    if(newGrid[rowIndex][colIndex]){
-      const removedPlant = newGrid[rowIndex][colIndex];
+  
+    // Handle removing a plant
+    if(newGrid[rowIndex][colIndex]) {
+   
       newGrid[rowIndex][colIndex] = "";
       setGrid(newGrid);
-      console.log("Removed plant", removedPlant);
-
       return;
     }
-
+  
     if(!selectedVegetable) return;
-
-    if(canPlacePlant(rowIndex, colIndex, selectedVegetable)){
-      newGrid[rowIndex][colIndex] = selectedVegetable;
+  
+    // Get the number of squares this plant requires
+    const plantInfo = vegetables.find(v => v.name === selectedVegetable);
+    const requiredSquares = plantInfo?.noOfSquares || 1;
+  
+    if(canPlacePlant(rowIndex, colIndex, selectedVegetable)) {
+      
+      const pattern = getOptimalPattern(requiredSquares, rowIndex, colIndex);
+    
+      // Place the plant in all cells in the pattern
+      for (const [r, c] of pattern) {
+        newGrid[r][c] = selectedVegetable;
+      }
+      
       setGrid(newGrid);
-
+  
       const { shouldAvoid } = getBorderStyle(rowIndex, colIndex, selectedVegetable);
       if (shouldAvoid) {
         setHasIncompatible(true);
       }
     } else {
       console.log("Cannot place plant", selectedVegetable);
+      // You could add visual feedback here
+      setHasIncompatible(true); // Use your existing error sound
     }
-
-    console.log(`Attempting to place ${selectedVegetable} at (${rowIndex}, ${colIndex})`);
-  };
+  }
 
   // Helper function to get the plant count for display
   const getPlantCount = (plantName: string): number => {
@@ -180,11 +269,13 @@ const Builder = () => {
                   selectedVegetable === veg.name ? "border-2 border-green-600" : ""
                 }`}
                 style={{ backgroundColor: veg.color }}
-                onPress={() => setSelectedVegetable(veg.name)}
+                onPress={() => {
+                  setSelectedVegetable(veg.name)
+                }}
               >
                 <View className="p-4 items-center">
                   <Image source={veg.image} className="w-16 h-16 rounded-full mb-2" style={{ backgroundColor: "white" }} />
-                  <Text className="text-base font-medium text-green-800">{veg.name}</Text>
+                  <Text className="text-base font-medium text-black">{veg.name}</Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -199,13 +290,14 @@ const Builder = () => {
             {grid.map((row, rowIndex) => (
               <View key={rowIndex} className="flex-row">
                 {row.map((cell, colIndex) => {
-                  const { isCompanion, shouldAvoid, incompatiblePlants } = cell ? getBorderStyle(rowIndex, colIndex, cell) : { isCompanion: false, shouldAvoid: false, incompatiblePlants: [] };
+                  const { isCompanion, shouldAvoid, incompatiblePlants, takesMoreSquares } = cell ? getBorderStyle(rowIndex, colIndex, cell) : { isCompanion: false,
+                    takesMoreSquares: false, shouldAvoid: false, incompatiblePlants: [] };
                   
                   return (
                     <TouchableOpacity
                       key={colIndex}
-                      className={`border ${cell ? "bg-opacity-20" : "bg-green-50"} ${
-                        isCompanion ? "border-green-500" : shouldAvoid ? "border-red-500" : "border-gray-400"
+                      className={`border border-1 ${cell ? "bg-opacity-20" : "bg-green-50"} ${
+                        isCompanion ? "border-2 border-green-500" : shouldAvoid ? "border-2 border-red-500" : "border-gray-300"
                       }`}
                       style={{
                         width: cellSize,

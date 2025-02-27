@@ -31,6 +31,19 @@ import Okra from "@/assets/images/okra.png";
 import Tomato from "@/assets/images/tomato.png";
 import Chilli from "@/assets/images/chilli.png";
 import Eggplant from "@/assets/images/eggplant.png";
+import Asparagus from "@/assets/images/asparagus.png";
+import Beet from "@/assets/images/beet.png";
+import Spinach from "@/assets/images/spinach.png";
+import Corn from "@/assets/images/corn.png";
+import Cucumber from "@/assets/images/cucumber.png";
+import Onion from "@/assets/images/onion.png";
+import Potato from "@/assets/images/potato.png";
+import Cowpea from "@/assets/images/cowpea.png";
+import Lettuce from "@/assets/images/lettuce.png";
+import Radish from "@/assets/images/radish.png";
+import Pumpkin from "@/assets/images/pumpkin.png";
+import Breadfruit from "@/assets/images/breadfruit.png";
+import Drumstick from "@/assets/images/drumstick.png";
 
 export const images = {
     onboarding1: plant1,
@@ -47,6 +60,19 @@ export const plantImages = {
   tomato: Tomato,
   chilli: Chilli,
   Eggplant: Eggplant,
+  Asparagus: Asparagus,
+  Beet: Beet,
+  Spinach: Spinach,
+  Corn: Corn,
+  Cucumber: Cucumber,
+  Onion: Onion,
+  Potato: Potato,
+  Cowpea: Cowpea,
+  Lettuce: Lettuce,
+  Radish: Radish,
+  Pumpkin: Pumpkin,
+  Breadfruit: Breadfruit,
+  Drumstick: Drumstick,
 }
 
 export const icons = {
