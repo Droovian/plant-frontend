@@ -8,6 +8,12 @@ import { vegetables } from "@/assets/data/plant";
 import { compatibility } from "@/assets/data/plant";
 import { StyleSheet } from "react-native";
 import { Audio } from "expo-av";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useUser } from "@clerk/clerk-expo";
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import axios from "axios";
+import { Alert } from "react-native";
 const BASE_CELL_SIZE = Dimensions.get("window").width < 375 ? 40 : 48;
 
 interface TooltipState {
@@ -19,6 +25,10 @@ interface TooltipState {
 
 const Builder = () => {
   const { width, height } = useGardenStore();
+  const { user } = useUser();
+  const userId = user?.id;
+  const router = useRouter();
+  const insets = useSafeAreaInsets()
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [grid, setGrid] = useState<string[][]>([]);
   const [hasIncompatible, setHasIncompatible] = useState<boolean>(false);
@@ -31,7 +41,7 @@ const Builder = () => {
     message: "",
   });
   const [selectedVegetable, setSelectedVegetable] = useState<string | null>(null);
-
+  
   const gridWidth = Number(width);
   const gridHeight = Number(height);
   const maxCells = 20;
@@ -40,6 +50,29 @@ const Builder = () => {
     (Dimensions.get("window").width - 32) / Math.min(gridWidth, maxCells),
     (Dimensions.get("window").height / 2) / Math.min(gridHeight, maxCells)
   );
+
+  const saveLayout = async () => {
+    if (!userId) {
+      Alert.alert("Error", "Please sign in to save your layout.");
+      return;
+    }
+
+    try {
+      const gridData = grid.map((row) => row.map((cell) => ({ plantName: cell })));
+
+      const response = await axios.post(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/layout`, { // Replace with your backend URL
+        userId,
+        grid: { rows: gridData },
+        width: gridWidth,
+        height: gridHeight,
+      });
+
+      Alert.alert("Success", "Layout saved successfully!");
+    } catch (error) {
+      console.error("Error saving layout:", error);
+      Alert.alert("Error", "Failed to save layout.");
+    }
+  };
 
   async function playSound() {
     if (sound) {
@@ -247,7 +280,7 @@ const Builder = () => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gradient-to-b from-green-50 to-green-100">
+    <SafeAreaView className="flex-1 bg-gradient-to-b from-green-50 to-green-100" style={{ paddingTop: insets.top }}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <MotiView
           from={{ opacity: 0, translateY: -20 }}
@@ -348,7 +381,7 @@ const Builder = () => {
         </View>
 
         <View className="px-4 mb-8 flex-row justify-between">
-          <CustomButton title="Show Insights" bgVariant="plant" className="py-4 rounded-xl shadow-lg flex-1 mr-2" onPress={() => {}} />
+          <CustomButton title="Save layout" bgVariant="plant" className="py-4 rounded-xl shadow-lg flex-1 mr-2" onPress={saveLayout} />
           <CustomButton
             title="Clear Garden"
             bgVariant="plant"
@@ -377,6 +410,14 @@ const Builder = () => {
           </View>
         )}
       </ScrollView>
+
+      <TouchableOpacity
+        onPress={() => router.back()}
+        className="absolute top-4 left-4 bg-white rounded-full p-3 shadow-lg"
+        style={{ marginTop: insets.top }}
+      >
+        <Ionicons name="arrow-back" size={24} color="#16a34a" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };

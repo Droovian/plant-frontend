@@ -165,9 +165,9 @@ const FeatureCard = ({ icon, title, description, onPress }: any) => (
 
 const quickActions = [
   {
-    icon: "water-outline",
-    title: "Water Tracker",
-    onPress: () => {},
+    icon: "clipboard-outline",
+    title: "My Layouts",
+    onPress: () => { router.push("/my-layouts") },
   },
   {
     icon: "sunny-outline",
