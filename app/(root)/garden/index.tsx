@@ -104,7 +104,7 @@ const Garden = () => {
           </Text>
         </View>
 
-        <View className="p-5">
+        {/* <View className="p-5">
           <View className="flex-row items-center mb-4">
             <Cloud size={24} color="#059669" />
             <Text className="text-xl font-bold text-gray-800 ml-2">Today's Weather</Text>
@@ -118,34 +118,10 @@ const Garden = () => {
             </View>
           ) : null}
 
-          {weather && (
-            <View className="flex-row justify-between mt-4">
-              <View className="flex-1 bg-white rounded-xl p-4 mr-2 shadow-sm">
-                <View className="flex-row items-center">
-                  <Sun size={20} color="#059669" />
-                  <Text className="text-gray-600 ml-2">UV Index</Text>
-                </View>
-                <Text className="text-lg font-semibold text-gray-800 mt-1">{weather.current.uv}</Text>
-              </View>
-              <View className="flex-1 bg-white rounded-xl p-4 mx-2 shadow-sm">
-                <View className="flex-row items-center">
-                  <Droplets size={20} color="#059669" />
-                  <Text className="text-gray-600 ml-2">Humidity</Text>
-                </View>
-                <Text className="text-lg font-semibold text-gray-800 mt-1">{weather.current.humidity}%</Text>
-              </View>
-              <View className="flex-1 bg-white rounded-xl p-4 ml-2 shadow-sm">
-                <View className="flex-row items-center">
-                  <Wind size={20} color="#059669" />
-                  <Text className="text-gray-600 ml-2">Wind</Text>
-                </View>
-                <Text className="text-lg font-semibold text-gray-800 mt-1">{weather.current.wind_kph} km/h</Text>
-              </View>
-            </View>
-          )}
-        </View>
+          { */
+          }
 
-        <View className="px-5 pb-5">
+        <View className="mt-5 px-5 pb-5">
           <View className="flex-row justify-between items-center mb-4">
             <View className="flex-row items-center">
               <Sprout size={24} color="#059669" />

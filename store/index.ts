@@ -10,7 +10,6 @@ type LocationStore = {
     getAddress: () => Promise<void>;
 }
 
-
 type GardenState = {
     width: string;
     height: string;
@@ -35,8 +34,6 @@ type GardenState = {
     setGardenData: (key, value) => set((state) => ({ ...state, [key]: value })),
   }));
   
-
-
 const useLocationStore = create<LocationStore>((set) => ({
     location: null,
     address: null,
@@ -77,6 +74,5 @@ const useLocationStore = create<LocationStore>((set) => ({
         }
     }
 }));
-
 
 export default useLocationStore;
