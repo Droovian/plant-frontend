@@ -24,6 +24,9 @@ interface WeatherData {
         condition: { text: string; icon: string }
         maxtemp_c: number
         mintemp_c: number
+        totalprecip_in: number
+        daily_will_it_rain: number
+        daily_chance_of_rain: number
       }
     }>
   }

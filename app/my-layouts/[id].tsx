@@ -25,12 +25,13 @@ interface LayoutData {
 }
 
 interface WateringSchedule {
-  [date: string]: { marked: boolean; dotColor: string };
+  [date: string]: { marked: boolean; dots: { color: string }[] };
 }
 
 interface WateringHistory {
+  layoutId: string | string[]; // Add layoutId if needed.
   plantName: string;
-  dates: string[];
+  wateringDates: string[]; // Change 'dates' to 'wateringDates' and make it an array of strings.
 }
 
 const LayoutDetail = () => {
@@ -39,7 +40,7 @@ const LayoutDetail = () => {
   const { user } = useUser();
   const userId = user?.id;
   const insets = useSafeAreaInsets();
-
+  
   const [layout, setLayout] = useState<LayoutData | null>(null);
   const [loading, setLoading] = useState(true);
   const [wateringSchedule, setWateringSchedule] = useState<WateringSchedule>({});
@@ -64,6 +65,9 @@ const LayoutDetail = () => {
       maxTemp: day.day.maxtemp_c,
       minTemp: day.day.mintemp_c,
       condition: day.day.condition.text,
+      totalPrecip: day.day.totalprecip_in,
+      willRain: day.day.daily_will_it_rain,
+      chanceOfRain: day.day.daily_chance_of_rain,
     })),
   } : null;
 
@@ -98,44 +102,11 @@ const LayoutDetail = () => {
 
   const fetchWateringHistory = async () => {
     try {
-      // Replace with your actual API call when implemented
-      // For now, we'll use mock data
-      const mockHistory: WateringHistory[] = [];
-      
-      // Generate some mock watering history for the last 30 days
-      const today = new Date();
-      const plants = ['Tomato', 'Chilli', 'Radish', 'Lettuce'];
-      
-      plants.forEach(plant => {
-        const plantHistory: WateringHistory = {
-          plantName: plant,
-          dates: []
-        };
-        
-        const waterInterval = getWateringInterval(plant);
-        let currentDate = new Date(today);
-        currentDate.setDate(currentDate.getDate() - 30); // Start from 30 days ago
-        
-        while (currentDate <= today) {
-          // Add some randomness to make it more realistic
-          if (Math.random() > 0.3) { // 70% chance of watering on schedule
-            plantHistory.dates.push(currentDate.toISOString().split('T')[0]);
-          }
-          
-          currentDate.setDate(currentDate.getDate() + waterInterval);
-        }
-        
-        mockHistory.push(plantHistory);
-      });
-      
-      setWateringHistory(mockHistory);
-      
-      // In a real app, you would fetch from your backend:
-      // const response = await axios.get(
-      //   `${process.env.EXPO_PUBLIC_NODE_KEY}/api/watering-history/${id}`
-      // );
-      // setWateringHistory(response.data);
-      
+      const response = await axios.get(
+        `${process.env.EXPO_PUBLIC_NODE_KEY}/api/watering-history/layout/${id}`
+      );
+      setWateringHistory(response.data);
+      generateWateringCalendar(); // Regenerate calendar after fetching
     } catch (error) {
       console.error('Error fetching watering history:', error);
     }
@@ -159,21 +130,48 @@ const LayoutDetail = () => {
     setWaterLevels(levels);
   };
 
-  const generateWateringCalendar = () => {
+
+  const generateColorMap = useCallback(() => {
+    if (!layout) return {};
+  
+    const colors = ['#3b82f6', '#16a34a', '#f97316', '#d946ef', '#2dd4bf', '#facc15'];
+    const colorMap: { [key: string]: string } = {}; 
+    const plantList: { [key: string]: boolean } = {};
+    let colorIndex = 0;
+  
+    layout.grid.rows.forEach((row) => {
+      row.forEach((cell) => {
+        if (cell.plantName && !plantList[cell.plantName]) {
+          plantList[cell.plantName] = true;
+          colorMap[cell.plantName] = colors[colorIndex % colors.length];
+          colorIndex++;
+        }
+      });
+    });
+  
+    return colorMap;
+  }, [layout]);
+
+  const generateWateringCalendar = useCallback(() => {
     if (!layout || !wateringHistory.length) return;
-    
+  
     const schedule: WateringSchedule = {};
     const today = new Date();
     const futureDate = new Date(today);
-    futureDate.setDate(today.getDate() + 30); // Generate for next 30 days
-    
+    futureDate.setDate(today.getDate() + 30);
+  
+    const colorMap = generateColorMap();
+  
     // Mark past watering dates
-    wateringHistory.forEach(history => {
-      history.dates.forEach(date => {
-        schedule[date] = { marked: true, dotColor: '#16a34a' };
+    wateringHistory.forEach((item) => {
+      item.wateringDates.forEach((date) => {
+        if (!schedule[date]) {
+          schedule[date] = { marked: true, dots: [] };
+        }
+        schedule[date].dots.push({ color: colorMap[item.plantName] });
       });
     });
-    
+  
     // Calculate future watering dates
     const plantList: { [key: string]: boolean } = {};
     layout.grid.rows.forEach((row) => {
@@ -183,41 +181,39 @@ const LayoutDetail = () => {
         }
       });
     });
-    
-    Object.keys(plantList).forEach(plantName => {
-      const history = wateringHistory.find(h => h.plantName === plantName);
-      if (!history || !history.dates.length) return;
-      
-      // Get last watering date
-      const sortedDates = [...history.dates].sort();
+  
+    Object.keys(plantList).forEach((plantName) => {
+      const plantHistory = wateringHistory.find((h) => h.plantName === plantName);
+  
+      if (!plantHistory || !plantHistory.wateringDates.length) return;
+  
+      const sortedDates = [...plantHistory.wateringDates].sort();
       const lastWateredDate = new Date(sortedDates[sortedDates.length - 1]);
-      const waterInterval = getWateringInterval(plantName);
-      
-      // Calculate next watering dates
+      let waterInterval = getWateringInterval(plantName);
+  
       let nextWateringDate = new Date(lastWateredDate);
       nextWateringDate.setDate(nextWateringDate.getDate() + waterInterval);
-      
+  
       while (nextWateringDate <= futureDate) {
         const dateString = nextWateringDate.toISOString().split('T')[0];
-        schedule[dateString] = { 
-          marked: true, 
-          dotColor: '#3b82f6' // Blue for future watering dates
-        };
-        
+  
+        if (!schedule[dateString]) {
+          schedule[dateString] = { marked: true, dots: [] };
+        }
+        schedule[dateString].dots.push({ color: colorMap[plantName] });
         nextWateringDate.setDate(nextWateringDate.getDate() + waterInterval);
       }
     });
-    
+  
     // Mark today
     const todayString = today.toISOString().split('T')[0];
-    schedule[todayString] = { 
-      ...schedule[todayString],
-      marked: true, 
-      dotColor: schedule[todayString]?.dotColor || '#f43f5e' // Red if not already marked
-    };
-    
+    if (!schedule[todayString]) {
+      schedule[todayString] = { marked: true, dots: [] };
+    }
+    schedule[todayString].dots.push({ color: '#000000' }); // Red for today
+  
     setWateringSchedule(schedule);
-  };
+  }, [wateringHistory, layout, generateColorMap]);
 
   const generateWateringInsights = () => {
     if (!layout || !weatherData || !weatherData.forecast) {
@@ -301,13 +297,26 @@ const LayoutDetail = () => {
 
   const getWateringInterval = (plantName: string) => {
     switch (plantName) {
-      case 'Tomato': return 3;
-      case 'Chilli': return 2;
-      case 'Radish': return 1;
-      case 'Lettuce': return 2;
-      default: return 3;
+        case 'Okra': return 3;        // Moderate water needs
+        case 'Tomato': return 3;      // Consistent moisture, every 3 days
+        case 'Chilli': return 2;      // Frequent watering, every 2 days
+        case 'Drumstick': return 7;   // Drought-tolerant once established, weekly
+        case 'Pumpkin': return 3;     // High water needs due to large leaves
+        case 'Breadfruit': return 7;  // Tree, weekly once established
+        case 'Radish': return 1;      // Shallow roots, daily watering
+        case 'Eggplant': return 3;    // Moderate water needs
+        case 'Potato': return 3;      // Consistent moisture for tubers
+        case 'Asparagus': return 3;   // Moderate water needs
+        case 'Beet': return 2;        // Frequent watering for root development
+        case 'Spinach': return 2;     // Cool-season, frequent shallow watering
+        case 'Corn': return 3;        // High water needs during growth
+        case 'Cucumber': return 2;    // High water needs, especially when fruiting
+        case 'Onion': return 3;       // Moderate water needs
+        case 'Cowpea': return 3;      // Moderate, drought-tolerant once established
+        case 'Lettuce': return 2;     // Frequent shallow watering for leaves
+        default: return 3;            // Default to moderate watering
     }
-  };
+};
 
   const renderGrid = useCallback(() => {
     if (!layout) return null;
@@ -356,46 +365,23 @@ const LayoutDetail = () => {
     }
   };
   
-  const updateWateringHistory = (plantName: string) => {
+  const updateWateringHistory = async (plantName: string) => {
     const today = new Date().toISOString().split('T')[0];
-    
-    // Update watering schedule for UI
-    setWateringSchedule((prevSchedule) => ({
-      ...prevSchedule,
-      [today]: { marked: true, dotColor: '#16a34a' },
-    }));
-    
-    // Update watering history
-    setWateringHistory(prevHistory => {
-      const updatedHistory = [...prevHistory];
-      const plantHistoryIndex = updatedHistory.findIndex(h => h.plantName === plantName);
-      
-      if (plantHistoryIndex >= 0) {
-        // Plant history exists, add new date
-        updatedHistory[plantHistoryIndex] = {
-          ...updatedHistory[plantHistoryIndex],
-          dates: [...updatedHistory[plantHistoryIndex].dates, today]
-        };
-      } else {
-        // Create new history for this plant
-        updatedHistory.push({
-          plantName,
-          dates: [today]
-        });
-      }
-      
-      // In a real app, you would save this to your backend:
-      // axios.post(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/watering-history`, {
-      //   layoutId: id,
-      //   plantName,
-      //   date: today
-      // });
-      
-      return updatedHistory;
-    });
-    
-    // Regenerate insights with new data
-    generateWateringInsights();
+
+    try {
+      await axios.post(
+        `${process.env.EXPO_PUBLIC_NODE_KEY}/api/watering-history`,
+        {
+          layoutId: id,
+          plantName: plantName,
+          date: today,
+        }
+      );
+      fetchWateringHistory(); // Refresh data and calendar
+    } catch (error) {
+      console.error('Error logging watering:', error);
+      Alert.alert('Error', 'Failed to log watering.');
+    }
   };
 
   const renderPlantCards = useCallback(() => {
@@ -445,6 +431,22 @@ const LayoutDetail = () => {
     });
   }, [layout, waterLevels, wateringHistory]);
 
+
+  const renderColorLegend = useCallback(() => {
+    const colorMap = generateColorMap();
+
+    return (
+      <View className="flex-row flex-wrap mt-2 justify-around">
+        {Object.entries(colorMap).map(([plantName, color]) => (
+          <View key={plantName} className="flex-row items-center m-1">
+            <View className="w-3 h-3 rounded-full mr-1" style={{ backgroundColor: color }} />
+            <Text className="text-xs text-gray-600">{plantName}</Text>
+          </View>
+        ))}
+      </View>
+    );
+  }, [generateColorMap]);
+
   return (
     <SafeAreaView className="flex-1 bg-green-50" style={{ paddingTop: insets.top }}>
       {loading ? (
@@ -488,21 +490,22 @@ const LayoutDetail = () => {
                 dotColor: '#16a34a',
                 selectedDotColor: '#ffffff',
               }}
-              markedDates={wateringSchedule}
+              markedDates={Object.keys(wateringSchedule).reduce(
+                (acc: { [key: string]: { dots: { color: string }[]; marked: boolean } }, date) => { // Explicitly type acc
+                  acc[date] = {
+                    dots: wateringSchedule[date].dots,
+                    marked: wateringSchedule[date].marked,
+                  };
+                  return acc;
+                },
+                {}
+              )}
+              markingType={'multi-dot'}
             />
-            <View className="flex-row mt-2 justify-around">
-              <View className="flex-row items-center">
-                <View className="w-3 h-3 rounded-full bg-green-600 mr-1" />
-                <Text className="text-xs text-gray-600">Watered</Text>
-              </View>
-              <View className="flex-row items-center">
-                <View className="w-3 h-3 rounded-full bg-blue-500 mr-1" />
-                <Text className="text-xs text-gray-600">Scheduled</Text>
-              </View>
-              <View className="flex-row items-center">
-                <View className="w-3 h-3 rounded-full bg-red-500 mr-1" />
-                <Text className="text-xs text-gray-600">Today</Text>
-              </View>
+            {renderColorLegend()}
+            <View className='flex flex-row justify-center mt-2'>
+              <View className="bg-black w-3 h-3 rounded-full mr-1" />
+              <Text className='text-xs text-gray-600 text-center'>Today</Text>
             </View>
           </View>
           
