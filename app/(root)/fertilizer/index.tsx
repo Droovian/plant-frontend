@@ -1,15 +1,16 @@
 import { useState, useCallback, useEffect } from "react"
-import { View, Text, Modal, TouchableOpacity, ScrollView, Animated } from "react-native"
-import { fertilizers, crops } from "@/assets/data/plant"
-import { ChevronDown, Minus, Plus, Leaf, AlertTriangle } from "lucide-react-native"
+import { View, Text, Modal, TouchableOpacity, ScrollView, Animated, TextInput } from "react-native"
+import { crops, indianStates, regionalFertilizers, fertilizers } from "@/assets/data/plant"
+import { ChevronDown, Minus, Plus, Leaf, AlertTriangle, Droplet, MapPin } from "lucide-react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { Crop, Fertilizer } from "@/types/plant"
+import { Crop, Fertilizer, IndianState, RegionalFertilizer } from "@/types/plant"
 import { Image } from "react-native"
 import { AI_GEN_IMAGES } from "@/constants"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
+import Slider from "@react-native-community/slider"
 
 interface NPKValues {
   N: number
@@ -17,18 +18,71 @@ interface NPKValues {
   K: number
 }
 
+// Extended to include soil and regional data
+interface CalculationParams {
+  npkValues: NPKValues
+  plotSize: number
+  unit: LandUnit
+  soilPH: number
+  selectedState: IndianState
+}
+
+type LandUnit = "Acre" | "Hectare" | "Bigha" | "Guntha"
+
+// Conversion factors to standardize land measurements to hectares
+const unitConversions = {
+  Acre: 0.4047,
+  Hectare: 1,
+  Bigha: 0.25, // Standard North Indian Bigha approximation
+  Guntha: 0.0101, // 1 Guntha = 1/40 Acre = 0.0101 hectares
+}
+
+// pH adjustment factors for NPK requirements
+const phAdjustmentFactors = {
+  N: {
+    low: (ph: number) => ph < 6 ? 1.2 : 1, // Increase N in acidic soils
+    high: (ph: number) => ph > 7.5 ? 1.15 : 1, // Increase N in alkaline soils
+  },
+  P: {
+    low: (ph: number) => ph < 6 ? 1.3 : 1, // Increase P in acidic soils - phosphorus gets fixed
+    high: (ph: number) => ph > 7.5 ? 1.25 : 1, // Increase P in alkaline soils
+  },
+  K: {
+    low: (ph: number) => ph < 6 ? 1.1 : 1, // Slight increase in acidic soils
+    high: (ph: number) => ph > 7.5 ? 1.05 : 1, // Slight increase in alkaline soils
+  }
+}
+
 const FertilizerCalculator = () => {
   const insets = useSafeAreaInsets()
   const router = useRouter()
   const [fadeAnim] = useState(new Animated.Value(0))
+  
+  // Core crop and NPK state
   const [selectedCrop, setSelectedCrop] = useState<Crop>(crops[0])
   const [userPlants, setUserPlants] = useState<Crop[]>([])
   const [npkValues, setNpkValues] = useState<NPKValues>(selectedCrop.npkRequirement)
-  const [unit, setUnit] = useState<"Acre" | "Hectare">("Acre")
+  
+  // Land measurement state
+  const [unit, setUnit] = useState<LandUnit>("Acre")
   const [plotSize, setPlotSize] = useState<number>(1)
+  
+  // UI control state
   const [modalVisible, setModalVisible] = useState<boolean>(false)
-  const [result, setResult] = useState<Record<string, { quantity: string; cost: string }> | null>(null)
+  const [stateModalVisible, setStateModalVisible] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(false)
+  
+  // New soil and regional data state
+  const [soilPH, setSoilPH] = useState<number>(7)
+  const [selectedState, setSelectedState] = useState<IndianState>(indianStates[0])
+  
+  // Results state
+  const [result, setResult] = useState<Record<string, { 
+    quantity: string; 
+    originalCost: string;
+    subsidizedCost: string;
+    subsidy: string;
+  }> | null>(null)
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -41,13 +95,41 @@ const FertilizerCalculator = () => {
   const calculateFertilizer = () => {
     setLoading(true)
     setTimeout(() => {
-      let remainingN = npkValues.N * plotSize
-      let remainingP = npkValues.P * plotSize
-      let remainingK = npkValues.K * plotSize
+      // Convert plot size to hectares for standardized calculation
+      const sizeInHectares = plotSize * unitConversions[unit]
+      
+      // Apply pH adjustments to NPK requirements
+      const adjustedNPK = {
+        N: npkValues.N * (soilPH < 6 ? phAdjustmentFactors.N.low(soilPH) : phAdjustmentFactors.N.high(soilPH)),
+        P: npkValues.P * (soilPH < 6 ? phAdjustmentFactors.P.low(soilPH) : phAdjustmentFactors.P.high(soilPH)),
+        K: npkValues.K * (soilPH < 6 ? phAdjustmentFactors.K.low(soilPH) : phAdjustmentFactors.K.high(soilPH)),
+      }
+      
+      let remainingN = adjustedNPK.N * sizeInHectares
+      let remainingP = adjustedNPK.P * sizeInHectares
+      let remainingK = adjustedNPK.K * sizeInHectares
 
-      const requiredFertilizers: Record<string, { quantity: string; cost: string }> = {}
+      const requiredFertilizers: Record<string, { 
+        quantity: string; 
+        originalCost: string;
+        subsidizedCost: string;
+        subsidy: string;
+      }> = {}
 
-      const sortedFertilizers = [...fertilizers].sort((a, b) => {
+      // Get available fertilizers for the selected state
+      const availableFertilizers = regionalFertilizers
+        .filter(rf => rf.stateId === selectedState.id)
+        .map(rf => ({
+          ...fertilizers.find(f => f.id === rf.fertilizerId)!,
+          subsidy: rf.subsidyPercentage
+        }))
+
+      // Sort fertilizers by effectiveness and government priority
+      const sortedFertilizers = [...availableFertilizers].sort((a, b) => {
+        // Prioritize government-approved fertilizers (higher subsidy means higher priority)
+        if (a.subsidy !== b.subsidy) return b.subsidy - a.subsidy
+        
+        // Then sort by NPK efficiency per cost
         const aScore = (a.composition.N + a.composition.P + a.composition.K) / a.costPerBag
         const bScore = (b.composition.N + b.composition.P + b.composition.K) / b.costPerBag
         return bScore - aScore
@@ -59,23 +141,34 @@ const FertilizerCalculator = () => {
         const { N, P, K } = fertilizer.composition
         const bagWeight = fertilizer.bagWeightKg
         const bagCost = fertilizer.costPerBag
+        const subsidy = fertilizer.subsidy / 100 // Convert percentage to decimal
 
         let requiredBags = 0
 
+        // Calculate required bags based on remaining nutrients
         if (N > 0 && remainingN > 0) requiredBags = Math.max(requiredBags, remainingN / N)
         if (P > 0 && remainingP > 0) requiredBags = Math.max(requiredBags, remainingP / P)
         if (K > 0 && remainingK > 0) requiredBags = Math.max(requiredBags, remainingK / K)
 
         requiredBags = Math.ceil(requiredBags)
 
-        remainingN = Math.max(0, remainingN - requiredBags * N)
-        remainingP = Math.max(0, remainingP - requiredBags * P)
-        remainingK = Math.max(0, remainingK - requiredBags * K)
-
         if (requiredBags > 0) {
+          // Adjust remaining nutrients
+          remainingN = Math.max(0, remainingN - requiredBags * N)
+          remainingP = Math.max(0, remainingP - requiredBags * P)
+          remainingK = Math.max(0, remainingK - requiredBags * K)
+
+          // Calculate costs
+          const totalWeight = requiredBags * bagWeight
+          const originalCost = requiredBags * bagCost
+          const subsidyAmount = originalCost * subsidy
+          const subsidizedCost = originalCost - subsidyAmount
+
           requiredFertilizers[fertilizer.name] = {
-            quantity: (requiredBags * bagWeight).toFixed(2) + " kg",
-            cost: "₹" + (requiredBags * bagCost).toFixed(2),
+            quantity: totalWeight.toFixed(2) + " kg",
+            originalCost: "₹" + originalCost.toFixed(2),
+            subsidizedCost: "₹" + subsidizedCost.toFixed(2),
+            subsidy: "₹" + subsidyAmount.toFixed(2) + " (" + (subsidy * 100).toFixed(0) + "%)",
           }
         }
       })
@@ -105,6 +198,7 @@ const FertilizerCalculator = () => {
     fetchSelectedPlants()
   }, [fetchSelectedPlants])
 
+  // Modal Components
   const PlantSelectionModal = () => (
     <Modal visible={modalVisible} animationType="slide" transparent>
       <View className="flex-1 bg-black/50 justify-end">
@@ -143,6 +237,46 @@ const FertilizerCalculator = () => {
     </Modal>
   )
 
+  const StateSelectionModal = () => (
+    <Modal visible={stateModalVisible} animationType="slide" transparent>
+      <View className="flex-1 bg-black/50 justify-end">
+        <View className="bg-white rounded-t-3xl">
+          <View className="p-4 border-b border-gray-200">
+            <Text className="text-xl font-bold text-gray-800">Select Your State</Text>
+            <Text className="text-gray-600 mt-1">Fertilizer availability and subsidies vary by state</Text>
+          </View>
+          
+          <ScrollView className="max-h-[70vh]">
+            <View className="p-4">
+              {indianStates.map((state: any) => (
+                <TouchableOpacity
+                  key={state.id}
+                  onPress={() => {
+                    setSelectedState(state)
+                    setStateModalVisible(false)
+                  }}
+                  className="flex-row items-center p-3 bg-gray-50 rounded-lg mb-2"
+                >
+                  <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-3">
+                    <MapPin size={20} color="#3b82f6" />
+                  </View>
+                  <Text className="text-gray-800 font-medium">{state.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+
+          <TouchableOpacity 
+            onPress={() => setStateModalVisible(false)}
+            className="m-4 bg-gray-800 rounded-lg p-4"
+          >
+            <Text className="text-white text-center font-semibold">Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  )
+
   const PlantOption = ({ plant }: { plant: Crop }) => (
     <TouchableOpacity
       onPress={() => {
@@ -170,13 +304,14 @@ const FertilizerCalculator = () => {
         <Animated.View style={{ opacity: fadeAnim }}>
           <View className="mb-6">
             <Text className="text-3xl font-bold text-gray-800 mb-2">Fertilizer Calculator</Text>
-            <Text className="text-gray-600">Get precise fertilizer recommendations for optimal crop growth</Text>
+            <Text className="text-gray-600">Get precise fertilizer recommendations with subsidies for Indian farmers</Text>
           </View>
 
           <View className="rounded-2xl w-full h-80 mb-6 shadow-lg">
             <Image source={AI_GEN_IMAGES.farmer} className="w-full h-full object-cover" />
           </View>
 
+          {/* Crop Selection Section */}
           <View className="bg-white rounded-xl shadow-md p-4 mb-6">
             <Text className="text-lg font-semibold text-gray-800 mb-3">Selected Crop</Text>
             <TouchableOpacity
@@ -193,6 +328,61 @@ const FertilizerCalculator = () => {
             </TouchableOpacity>
           </View>
 
+          {/* State Selection Section - NEW */}
+          <View className="bg-white rounded-xl shadow-md p-4 mb-6">
+            <Text className="text-lg font-semibold text-gray-800 mb-3">State/Region</Text>
+            <TouchableOpacity
+              onPress={() => setStateModalVisible(true)}
+              className="flex-row items-center justify-between bg-gray-50 rounded-lg p-4"
+            >
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-3">
+                  <MapPin size={20} color="#3b82f6" />
+                </View>
+                <Text className="text-gray-800 font-medium">{selectedState.name}</Text>
+              </View>
+              <ChevronDown size={24} color="#4B5563" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Soil Data Section - NEW */}
+          <View className="bg-white rounded-xl shadow-md p-4 mb-6">
+            <Text className="text-lg font-semibold text-gray-800 mb-3">Soil Data</Text>
+            <View className="mb-4">
+              <Text className="text-gray-600 mb-2">Soil pH ({soilPH.toFixed(1)})</Text>
+              <View className="px-2">
+                <Slider
+                  minimumValue={5}
+                  maximumValue={9}
+                  step={0.1}
+                  value={soilPH}
+                  onValueChange={setSoilPH}
+                  minimumTrackTintColor="#16a34a"
+                  maximumTrackTintColor="#d1d5db"
+                  thumbTintColor="#16a34a"
+                />
+                <View className="flex-row justify-between mt-1">
+                  <Text className="text-xs text-gray-500">Acidic (5.0)</Text>
+                  <Text className="text-xs text-gray-500">Neutral (7.0)</Text>
+                  <Text className="text-xs text-gray-500">Alkaline (9.0)</Text>
+                </View>
+              </View>
+            </View>
+            <View className="bg-yellow-50 rounded-lg p-3">
+              <View className="flex-row items-center">
+                <AlertTriangle size={16} color="#d97706" className="mr-2" />
+                <Text className="text-yellow-800 text-sm">
+                  {soilPH < 6 
+                    ? "Acidic soil may require lime application alongside fertilizers."
+                    : soilPH > 7.5 
+                    ? "Alkaline soil may require gypsum or sulfur amendments."
+                    : "Your soil pH is in the optimal range for most crops."}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* NPK Requirements Section */}
           <View className="bg-white rounded-xl shadow-md p-4 mb-6">
             <Text className="text-lg font-semibold text-gray-800 mb-3">NPK Requirements</Text>
             <View className="flex-row justify-between">
@@ -209,18 +399,25 @@ const FertilizerCalculator = () => {
             </View>
           </View>
 
+          {/* Plot Details Section - ENHANCED with additional units */}
           <View className="bg-white rounded-xl shadow-md p-4 mb-6">
             <Text className="text-lg font-semibold text-gray-800 mb-3">Plot Details</Text>
             <View className="mb-4">
               <Text className="text-gray-600 mb-2">Unit of Measurement</Text>
-              <View className="flex-row">
-                {["Acre", "Hectare"].map((option) => (
+              <View className="flex-wrap flex-row">
+                {["Acre", "Hectare", "Bigha", "Guntha"].map((option, index) => (
                   <TouchableOpacity
                     key={option}
-                    onPress={() => setUnit(option as "Acre" | "Hectare")}
-                    className={`flex-1 p-3 ${
+                    onPress={() => setUnit(option as LandUnit)}
+                    className={`${
+                      index < 2 ? "w-1/2" : "w-1/2"
+                    } p-3 ${
                       unit === option ? "bg-gray-800" : "bg-gray-200"
-                    } ${option === "Acre" ? "rounded-l-lg" : "rounded-r-lg"}`}
+                    } ${
+                      index % 2 === 0 ? "rounded-l-lg" : "rounded-r-lg"
+                    } ${
+                      index < 2 ? "mb-2" : ""
+                    }`}
                   >
                     <Text className={`text-center font-medium ${unit === option ? "text-white" : "text-gray-800"}`}>
                       {option}
@@ -234,14 +431,24 @@ const FertilizerCalculator = () => {
               <Text className="text-gray-600 mb-2">Plot Size ({unit})</Text>
               <View className="flex-row items-center justify-between bg-gray-50 rounded-lg p-3">
                 <TouchableOpacity 
-                  onPress={() => setPlotSize(Math.max(0.5, plotSize - 0.5))}
+                  onPress={() => setPlotSize(Math.max(0.1, plotSize - (unit === "Guntha" ? 0.1 : 0.5)))}
                   className="bg-gray-200 rounded-full p-2"
                 >
                   <Minus size={20} color="#4B5563" />
                 </TouchableOpacity>
-                <Text className="text-xl font-bold text-gray-800">{plotSize}</Text>
+                <TextInput
+                  value={plotSize.toString()}
+                  onChangeText={(text) => {
+                    const value = parseFloat(text)
+                    if (!isNaN(value) && value > 0) {
+                      setPlotSize(value)
+                    }
+                  }}
+                  keyboardType="numeric"
+                  className="text-xl font-bold text-gray-800 text-center w-20"
+                />
                 <TouchableOpacity 
-                  onPress={() => setPlotSize(plotSize + 0.5)}
+                  onPress={() => setPlotSize(plotSize + (unit === "Guntha" ? 0.1 : 0.5))}
                   className="bg-gray-200 rounded-full p-2"
                 >
                   <Plus size={20} color="#4B5563" />
@@ -260,32 +467,55 @@ const FertilizerCalculator = () => {
             </Text>
           </TouchableOpacity>
 
+          {/* Results Section - ENHANCED with subsidy information */}
           {result && (
             <View className="bg-white rounded-xl shadow-md p-4 mb-6">
               <Text className="text-xl font-bold text-gray-800 mb-4">Recommended Fertilizers</Text>
               <View className="bg-blue-50 rounded-lg p-3 mb-4">
                 <Text className="text-blue-800 text-sm">
-                  Recommendations are based on optimal NPK requirements for your selected crop and plot size
+                  Recommendations include govt. subsidies for {selectedState.name} and account for your soil pH ({soilPH.toFixed(1)})
                 </Text>
               </View>
               
               {Object.entries(result).map(([fertilizer, details]) => (
                 <View
                   key={fertilizer}
-                  className="flex-row justify-between items-center p-3 border-b border-gray-100"
+                  className="p-3 border-b border-gray-100"
                 >
-                  <View className="flex-row items-center flex-1">
-                    <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mr-3">
-                      <Leaf size={20} color="#16a34a" />
-                    </View>
-                    <View>
-                      <Text className="text-gray-800 font-medium">{fertilizer}</Text>
-                      <Text className="text-gray-500">{details.quantity}</Text>
+                  <View className="flex-row justify-between items-center">
+                    <View className="flex-row items-center flex-1">
+                      <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mr-3">
+                        <Leaf size={20} color="#16a34a" />
+                      </View>
+                      <View>
+                        <Text className="text-gray-800 font-medium">{fertilizer}</Text>
+                        <Text className="text-gray-500">{details.quantity}</Text>
+                      </View>
                     </View>
                   </View>
-                  <Text className="text-gray-800 font-bold">{details.cost}</Text>
+                  
+                  <View className="mt-2 ml-12">
+                    <View className="flex-row justify-between">
+                      <Text className="text-gray-500">Original Cost:</Text>
+                      <Text className="text-gray-500">{details.originalCost}</Text>
+                    </View>
+                    <View className="flex-row justify-between">
+                      <Text className="text-green-600">Subsidy:</Text>
+                      <Text className="text-green-600">{details.subsidy}</Text>
+                    </View>
+                    <View className="flex-row justify-between mt-1">
+                      <Text className="text-gray-800 font-semibold">Your Cost:</Text>
+                      <Text className="text-gray-800 font-bold">{details.subsidizedCost}</Text>
+                    </View>
+                  </View>
                 </View>
               ))}
+              
+              <View className="mt-4 p-3 bg-green-50 rounded-lg">
+                <Text className="text-green-800 text-sm">
+                  Visit your nearest Krishi Vigyan Kendra or Agricultural Extension Center for more information on these fertilizers and subsidy schemes.
+                </Text>
+              </View>
             </View>
           )}
         </Animated.View>
@@ -300,6 +530,7 @@ const FertilizerCalculator = () => {
       </TouchableOpacity>
 
       <PlantSelectionModal />
+      <StateSelectionModal />
     </SafeAreaView>
   )
 }

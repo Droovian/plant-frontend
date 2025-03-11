@@ -1,3 +1,17 @@
+export interface IndianState {
+    id: string
+    name: string
+    region: "North" | "South" | "East" | "West" | "Central" | "Northeast"
+  }
+  
+  export interface RegionalFertilizer {
+    id: string
+    stateId: string
+    fertilizerId: string
+    subsidyPercentage: number 
+    isPreferred: boolean 
+  }
+
 export type Crop = {
     id: string;
     name: string;
@@ -7,6 +21,7 @@ export type Crop = {
         K: number;
     };
     imageUrl?: string;
+    description: string;
 }
 
 export type Fertilizer = {
@@ -19,6 +34,7 @@ export type Fertilizer = {
     };
     costPerBag: number;
     bagWeightKg: number;
+    description?: string;
 }
 
 export type compatibilityInfo = {
