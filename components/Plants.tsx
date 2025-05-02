@@ -25,7 +25,7 @@ const Plant = () => {
     const fetchPlants = async () => {
       const token = await getToken();
       try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/plant`, {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_RENDER_KEY}/api/plant`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`,

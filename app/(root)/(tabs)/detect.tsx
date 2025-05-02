@@ -5,11 +5,13 @@ import * as ImagePicker from 'expo-image-picker';
 import { FontAwesome5 } from '@expo/vector-icons';
 import CustomButton from '@/components/Button';
 import ImageViewer from '@/components/ImageViewer';
+import HeatImageViewer from '@/components/HeatMapViewer';
 
 interface PredictionResult {
   class: string;
   confidence: number;
   insights: string;
+  heatmap: string;
 }
 
 type PlantHealthImages = {
@@ -24,10 +26,12 @@ const plantHealthTypes: PlantHealthImages = {
 };
 
 export default function Detect() {
+  var base64Icon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAwBQTFRF7c5J78kt+/Xm78lQ6stH5LI36bQh6rcf7sQp671G89ZZ8c9V8c5U9+u27MhJ/Pjv9txf8uCx57c937Ay5L1n58Nb67si8tVZ5sA68tJX/Pfr7dF58tBG9d5e8+Gc6chN6LM+7spN1pos6rYs6L8+47hE7cNG6bQc9uFj7sMn4rc17cMx3atG8duj+O7B686H7cAl7cEm7sRM26cq/vz5/v767NFY7tJM78Yq8s8y3agt9dte6sVD/vz15bY59Nlb8txY9+y86LpA5LxL67pE7L5H05Ai2Z4m58Vz89RI7dKr+/XY8Ms68dx/6sZE7sRCzIEN0YwZ67wi6rk27L4k9NZB4rAz7L0j5rM66bMb682a5sJG6LEm3asy3q0w3q026sqC8cxJ6bYd685U5a457cIn7MBJ8tZW7c1I7c5K7cQ18Msu/v3678tQ3aMq7tNe6chu6rgg79VN8tNH8c0w57Q83akq7dBb9Nld9d5g6cdC8dyb675F/v327NB6////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/LvB3QAAAMFJREFUeNpiqIcAbz0ogwFKm7GgCjgyZMihCLCkc0nkIAnIMVRw2UhDBGp5fcurGOyLfbhVtJwLdJkY8oscZCsFPBk5spiNaoTC4hnqk801Qi2zLQyD2NlcWWP5GepN5TOtSxg1QwrV01itpECG2kaLy3AYiCWxcRozQWyp9pNMDWePDI4QgVpbx5eo7a+mHFOqAxUQVeRhdrLjdFFQggqo5tqVeSS456UEQgWE4/RBboxyC4AKCEI9Wu9lUl8PEGAAV7NY4hyx8voAAAAASUVORK5CYII=';
   const [selectedImage, setSelectedImage] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [predictionResult, setPredictionResult] = useState<PredictionResult | null>(null);
+  const [heatmap, setHeatmap] = useState<string | undefined>(undefined);
 
   const pickImageAsync = async (): Promise<void> => {
     setError(null);
@@ -85,8 +89,8 @@ export default function Detect() {
       } as any); 
 
       const apiUrl = process.env.EXPO_PUBLIC_PYAPI_KEY || '';
-      // console.log(`${apiUrl}/predict`);
-      // console.log("FormData:", formData);
+      console.log(`${apiUrl}/predict`);
+      console.log("FormData:", formData);
       const response = await fetch(`${apiUrl}/predict`, {
         method: 'POST',
         body: formData,
@@ -94,14 +98,17 @@ export default function Detect() {
           'Content-Type': 'multipart/form-data',
         },
       });
-      // console.log("Fetch complete. Response Status:", response.status);
+      console.log("Fetch complete. Response Status:", response.status);
       const data = await response.json();
       // console.log("Response Data:", data);
       if (response.ok) {
+        console.log(data.heatmap_base64);
+        
         setPredictionResult({
           class: data.predicted_class,
           confidence: data.confidence,
           insights: data.insights,
+          heatmap: data.heatmap
         });
       } else {
         setError(data.error || 'Failed to analyze image');
@@ -246,7 +253,16 @@ export default function Detect() {
                   </View>
                 </View>
               )}
+
+            <View style={styles.imageContainer}>
+              <Image 
+                  source={{ uri: `data:image/jpeg;base64,${predictionResult.heatmap}` }} 
+                  style={{ width: 300, height: 300 }} 
+                />
+              </View>
             </View>
+
+            {/* <Image style={{width: 100, height: 50, borderWidth: 1, borderColor: 'red'}} source={{uri: base64Icon}}/> */}
             
             <View style={styles.actionButtons}>
               <CustomButton 
@@ -285,27 +301,30 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     marginLeft: 10,
   },
-  imageContainer: {
+  imageContainer: { // Keep this container for margin/shadows etc.
     marginBottom: 20,
-    borderRadius: 12,
-    overflow: 'hidden',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    backgroundColor: '#32373E',
-    padding: 8,
+    // Removed background, padding, etc. if ImageViewer handles its own background
+    // Ensure it doesn't clip the ImageViewer unnecessarily
   },
-  imageViewer: {
-    width: 300,
-    height: 300,
-    borderRadius: 8,
+  imageViewer: { // Style applied TO the ImageViewer component
+    width: 200, // Or use Dimensions API for dynamic width
+    height: 200,
+    borderRadius: 8, // Apply border radius to the viewer itself
+    overflow: 'hidden', // Important to clip the overlay if needed
+    alignSelf: 'center', // Center the viewer if imageContainer is wider
   },
   instructionContainer: {
     padding: 10,
     marginBottom: 15,
   },
+  heatmapInfoText: {
+    fontSize: 13,
+    color: '#9E9E9E',
+    textAlign: 'center',
+    marginTop: -5, // Adjust spacing
+    marginBottom: 15,
+    fontStyle: 'italic',
+},
   instructionText: {
     color: '#BDC3C7',
     fontSize: 16,
@@ -454,5 +473,17 @@ const styles = StyleSheet.create({
   actionButtons: {
     padding: 15,
     paddingTop: 0,
+  },
+  heatmapContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  
+  heatmapImage: {
+    width: '100%',
+    height: 300,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
   },
 });

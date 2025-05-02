@@ -34,7 +34,7 @@ interface WeatherData {
 
 const useWeather = () => {
     const [weather, setWeather] = useState<WeatherData | null>(null);
-    const { location, address } = useLocationStore();
+    const { location, address } = useLocationStore(); 
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const WEATHER_API_KEY = process.env.EXPO_PUBLIC_WEATHER_API_KEY!;

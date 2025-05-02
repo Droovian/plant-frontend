@@ -62,12 +62,6 @@ const Garden = () => {
     })()
   }, [])
 
-  useEffect(() => {
-    if (address?.city) {
-      fetchWeather()
-    }
-  }, [address?.city])
-
   if (errorMsg || addressErrorMsg) {
     return (
       <View className="flex-1 justify-center items-center bg-red-50" style={{ paddingTop: insets.top }}>

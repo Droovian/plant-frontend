@@ -8,7 +8,7 @@ import { useAuth } from "@clerk/clerk-expo"
 import AntDesign from '@expo/vector-icons/AntDesign';
 
 interface Post {
-  _id: string
+  id: string
   title: string
   content: string
   type: string
@@ -63,7 +63,7 @@ const Community = () => {
 
         setPosts(prevPosts => {
           const newPosts = data.posts.filter(
-            newPost => !prevPosts.some(existingPost => existingPost._id === newPost._id)
+            newPost => !prevPosts.some(existingPost => existingPost.id === newPost.id)
           )
           return [...prevPosts, ...newPosts]
         })
@@ -123,7 +123,7 @@ const Community = () => {
       })
 
       if (response.ok) {
-        setPosts(posts.filter((post) => post._id !== postId))
+        setPosts(posts.filter((post) => post.id !== postId))
         setIsModalVisible(false);
         Alert.alert("Post deleted successfully.")
       }
@@ -139,9 +139,9 @@ const Community = () => {
 
   const renderPost = ({ item }: { item: Post }) => {
     return (
-      <View key={item._id} className="rounded-xl p-4 mb-4 bg-white border border-gray-200">
+      <View key={item.id} className="rounded-xl p-4 mb-4 bg-white border border-gray-200">
       <TouchableOpacity
-        onPress={() => router.push(`/community/post/${item?._id}`)}
+        onPress={() => router.push(`/community/post/${item?.id}`)}
         className="flex-row justify-between items-start"
       >
         <View className="flex-1 mr-4">
@@ -197,7 +197,7 @@ const Community = () => {
             
             {selectedPost && selectedPost?.userId === userId && (
                 <TouchableOpacity 
-                  onPress={() => deletePost(selectedPost._id)} 
+                  onPress={() => deletePost(selectedPost.id)} 
                   className="py-4 flex-row items-center justify-center border-b border-gray-100"
                 >
                   <Feather name="trash-2" size={20} color="red" className="mr-3" />
@@ -234,7 +234,7 @@ const Community = () => {
 
         <FlatList
           data={filteredPosts}
-          keyExtractor={(item) => item._id}
+          keyExtractor={(item) => item.id}
           renderItem={renderPost}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           onEndReached={loadMorePosts}

@@ -9,12 +9,23 @@ import AsyncStorage from "@react-native-async-storage/async-storage"
 import PlantSelectionScreen from "@/components/PlantSelectionSplash"
 import LayoutImage from "@/assets/images/layout.png"
 import { Crop } from "@/types/plant"
+import useLocationStore from "@/store"
 
 const HomePage = () => {
   const { user } = useUser()
   const { signOut } = useAuth()
+  const { getLocation, getAddress } = useLocationStore();
   const [showPlantModal, setShowPlantModal] = useState<boolean>(false)
   const [fadeAnim] = useState(new Animated.Value(0))
+  
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      await getLocation();
+      await getAddress();
+    };
+
+    fetchInitialData();
+  }, [getLocation, getAddress]);
   
   useEffect(() => {
     Animated.timing(fadeAnim, {

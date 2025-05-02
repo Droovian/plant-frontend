@@ -89,9 +89,9 @@ const MyLayoutsList = () => {
       >
         <View className="p-4 border-l-4 border-green-500">
           <View className="flex-row justify-between items-center">
-            <Text className="text-lg font-semibold text-gray-800">Layout #{item._id.slice(-4)}</Text>
+            <Text className="text-lg font-semibold text-gray-800">Layout #{item.id}</Text>
             <View className="flex-row items-center">
-              <TouchableOpacity onPress={() => handleDeleteLayout(item._id)} className="mr-2">
+              <TouchableOpacity onPress={() => handleDeleteLayout(item.id)} className="mr-2">
                 <Ionicons name="trash-outline" size={20} color="red" />
               </TouchableOpacity>
               <View className="bg-green-100 px-2 py-1 rounded-full">
@@ -104,7 +104,7 @@ const MyLayoutsList = () => {
             <Text className="text-gray-700">{formatDate(item.createdAt)}</Text>
           </View>
           <View className="flex-row justify-end mt-2">
-            <TouchableOpacity className="flex-row items-center" onPress={() => navigateToLayout(item._id)}>
+            <TouchableOpacity className="flex-row items-center" onPress={() => navigateToLayout(item.id)}>
               <Ionicons name="chevron-forward" size={16} color="#16a34a" />
               <Text className="text-green-600 text-sm">View Details</Text>
             </TouchableOpacity>
@@ -162,7 +162,7 @@ const MyLayoutsList = () => {
           ref={flatListRef}
           data={layouts}
           renderItem={renderItem}
-          keyExtractor={(item) => item._id}
+          keyExtractor={(item) => item.id}
           ListEmptyComponent={<EmptyListComponent />}
           contentContainerClassName="pb-6 flex-grow"
           showsVerticalScrollIndicator={false}

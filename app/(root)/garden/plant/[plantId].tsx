@@ -87,7 +87,7 @@ const PlantIndividual = () => {
         if(!token){
           return router.push('/sign-in')
         }
-        const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/plant/${plantId}`, {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_RENDER_KEY}/api/plant/${plantId}`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`,

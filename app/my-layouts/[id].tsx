@@ -87,6 +87,8 @@ const LayoutDetail = () => {
 
   const fetchLayout = async () => {
     setLoading(true);
+    console.log(`Fetching layout for ID: ${id}`);
+    
     try {
       const response = await axios.get(
         `${process.env.EXPO_PUBLIC_NODE_KEY}/api/layout/${id}`
