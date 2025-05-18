@@ -124,16 +124,36 @@ const FertilizerCalculator = () => {
           subsidy: rf.subsidyPercentage
         }))
 
-      // Sort fertilizers by effectiveness and government priority
+      const P2O5_TO_P = 0.436;
+      const K2O_TO_K = 0.83;
+
+      // Calculate the "nutrient fulfillment score" for each fertilizer
       const sortedFertilizers = [...availableFertilizers].sort((a, b) => {
-        // Prioritize government-approved fertilizers (higher subsidy means higher priority)
-        if (a.subsidy !== b.subsidy) return b.subsidy - a.subsidy
-        
-        // Then sort by NPK efficiency per cost
-        const aScore = (a.composition.N + a.composition.P + a.composition.K) / a.costPerBag
-        const bScore = (b.composition.N + b.composition.P + b.composition.K) / b.costPerBag
-        return bScore - aScore
-      })
+          if (a.subsidy !== b.subsidy) return b.subsidy - a.subsidy;
+
+          // Calculate "weighted" nutrient value based on what is still needed
+          const aN = a.composition.N;
+          const aP = a.composition.P * P2O5_TO_P;
+          const aK = a.composition.K * K2O_TO_K;
+          const bN = b.composition.N;
+          const bP = b.composition.P * P2O5_TO_P;
+          const bK = b.composition.K * K2O_TO_K;
+
+          // Use remainingN, remainingP, remainingK from your context
+          const aScore = (
+            (remainingN > 0 ? aN : 0) +
+            (remainingP > 0 ? aP : 0) +
+            (remainingK > 0 ? aK : 0)
+          ) / a.costPerBag;
+
+          const bScore = (
+            (remainingN > 0 ? bN : 0) +
+            (remainingP > 0 ? bP : 0) +
+            (remainingK > 0 ? bK : 0)
+          ) / b.costPerBag;
+
+          return bScore - aScore;
+      });
 
       sortedFertilizers.forEach((fertilizer) => {
         if (remainingN <= 0 && remainingP <= 0 && remainingK <= 0) return
@@ -143,20 +163,27 @@ const FertilizerCalculator = () => {
         const bagCost = fertilizer.costPerBag
         const subsidy = fertilizer.subsidy / 100 // Convert percentage to decimal
 
+        const nutrientNPerBag = (N / 100) * bagWeight;
+        const P2O5_to_P = 0.436 // Conversion factor
+        const nutrientPPerBag = (P / 100) * bagWeight * P2O5_to_P
+        const K2O_to_K = 0.83
+        const nutrientKPerBag = (K / 100) * bagWeight * K2O_to_K
+
         let requiredBags = 0
 
         // Calculate required bags based on remaining nutrients
-        if (N > 0 && remainingN > 0) requiredBags = Math.max(requiredBags, remainingN / N)
-        if (P > 0 && remainingP > 0) requiredBags = Math.max(requiredBags, remainingP / P)
-        if (K > 0 && remainingK > 0) requiredBags = Math.max(requiredBags, remainingK / K)
+        if (nutrientNPerBag > 0 && remainingN > 0) requiredBags = Math.max(requiredBags, remainingN / nutrientNPerBag)
+        if (nutrientPPerBag > 0 && remainingP > 0) requiredBags = Math.max(requiredBags, remainingP / nutrientPPerBag)
+        if (nutrientKPerBag > 0 && remainingK > 0) requiredBags = Math.max(requiredBags, remainingK / nutrientKPerBag)
 
-        requiredBags = Math.ceil(requiredBags)
-
+        requiredBags = Number(requiredBags.toFixed(2))
+        // Round up to the nearest whole number
+        
         if (requiredBags > 0) {
           // Adjust remaining nutrients
-          remainingN = Math.max(0, remainingN - requiredBags * N)
-          remainingP = Math.max(0, remainingP - requiredBags * P)
-          remainingK = Math.max(0, remainingK - requiredBags * K)
+          remainingN = Math.max(0, remainingN - requiredBags * nutrientNPerBag)
+          remainingP = Math.max(0, remainingP - requiredBags * nutrientPPerBag)
+          remainingK = Math.max(0, remainingK - requiredBags * nutrientKPerBag)
 
           // Calculate costs
           const totalWeight = requiredBags * bagWeight

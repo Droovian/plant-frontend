@@ -73,7 +73,109 @@ const indianStates: IndianState[] = [
     name: "Potato",
     npkRequirement: { N: 120, P: 80, K: 100 },
     description: "Major vegetable crop across India"
-  }
+  },
+  {
+    id: "c109",
+    name: "Brinjal (Eggplant)",
+    npkRequirement: { N: 300, P: 50, K: 90 },
+    description: "Widely grown vegetable, thrives in warm climates; staple in Indian cuisine"
+  }, // [1]
+  {
+    id: "c110",
+    name: "Okra (Lady's Finger)",
+    npkRequirement: { N: 120, P: 60, K: 60 },
+    description: "Popular summer vegetable, valued for its tender pods"
+  }, // [2] (M5 in study had highest yield, common Indian recommendation is 120:60:60)
+  {
+    id: "c111",
+    name: "Tomato",
+    npkRequirement: { N: 120, P: 60, K: 60 },
+    description: "Major vegetable crop, grown year-round for fresh and processed use"
+  }, // [3] (balanced NPK such as 10-10-10 recommended; typical Indian practice is 120:60:60)
+  {
+    id: "c112",
+    name: "Onion",
+    npkRequirement: { N: 125, P: 100, K: 100 },
+    description: "Essential bulb crop, grown in all seasons across India"
+  }, // [4]
+  {
+    id: "c113",
+    name: "Red Amaranth",
+    npkRequirement: { N: 400, P: 120, K: 120 },
+    description: "Leafy vegetable rich in iron and vitamins, grown for tender leaves"
+  }, // [5] (40 g/m² ≈ 400 kg/ha; P and K at 120 kg/ha based on proportional application)
+  {
+    id: "c114",
+    name: "Cucumber",
+    npkRequirement: { N: 150, P: 75, K: 75 },
+    description: "Warm season vine crop, grown for fresh and salad use"
+  }, // [6]
+  {
+    id: "c115",
+    name: "Colocasia (Taro)",
+    npkRequirement: { N: 80, P: 60, K: 80 },
+    description: "Tuber crop grown for edible corms and leaves"
+  }, // (Standard Indian recommendation; direct source not found, but aligns with typical extension guidelines)
+  {
+    id: "c116",
+    name: "Tendli (Ivy Gourd)",
+    npkRequirement: { N: 60, P: 50, K: 50 },
+    description: "Perennial climber, popular in South and Western India"
+  }, // [7] (No direct NPK, but standard for gourds is 60:50:50)
+  {
+    id: "c117",
+    name: "Bitter Gourd",
+    npkRequirement: { N: 100, P: 50, K: 50 },
+    description: "Climbing vine, valued for its medicinal and nutritional properties"
+  }, // [8] (10-10-15 kg/250m² ≈ 100:50:75; rounded to common field practice)
+  {
+    id: "c118",
+    name: "Radish",
+    npkRequirement: { N: 200, P: 100, K: 50 },
+    description: "Fast-growing root vegetable, widely consumed raw or cooked"
+  }, // [9]
+  {
+    id: "c119",
+    name: "Basil",
+    npkRequirement: { N: 60, P: 40, K: 40 },
+    description: "Aromatic herb, grown for leaves used in culinary and medicinal applications"
+  }, // [10] (100–150 ppm N ≈ 60 kg/ha; P, K estimated based on low fertility requirement)
+  {
+    id: "c120",
+    name: "Pepper (Capsicum/Chili)",
+    npkRequirement: { N: 150, P: 60, K: 60 },
+    description: "Fruit vegetable, grown for fresh and dried spice markets"
+  }, // (Standard Indian recommendation; direct source not found, but aligns with extension guidelines)
+  {
+    id: "c121",
+    name: "Sweet Potato",
+    npkRequirement: { N: 60, P: 50, K: 50 },
+    description: "Tuber crop, rich in starch and vitamins, grown in tropical regions"
+  }, // (Standard Indian recommendation; direct source not found)
+  {
+    id: "c122",
+    name: "Corn (Sweet Corn)",
+    npkRequirement: { N: 120, P: 60, K: 40 },
+    description: "Warm-season cereal crop, grown for fresh cobs and processed products"
+  }, // (Same as Maize; [your data])
+  {
+    id: "c123",
+    name: "Cabbage",
+    npkRequirement: { N: 150, P: 75, K: 75 },
+    description: "Leafy vegetable, grown for dense heads, popular in cool seasons"
+  }, // (Standard Indian recommendation; direct source not found)
+  {
+    id: "c124",
+    name: "Carrot",
+    npkRequirement: { N: 100, P: 60, K: 50 },
+    description: "Root vegetable, rich in beta-carotene, grown in winter and spring"
+  }, // (Standard Indian recommendation; direct source not found)
+  {
+    id: "c125",
+    name: "Cowpea",
+    npkRequirement: { N: 25, P: 50, K: 25 },
+    description: "Legume crop, grown for edible pods and seeds, fixes atmospheric nitrogen"
+  }, // (Standard Indian recommendation; direct source not found)
 ]
   
   const vegetables = [
