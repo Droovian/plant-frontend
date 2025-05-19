@@ -35,7 +35,7 @@ const indianStates: IndianState[] = [
   {
     id: "c102",
     name: "Wheat",
-    npkRequirement: { N: 120, P: 60, K: 40 },
+    npkRequirement: { N: 120, P: 60, K: 60 },
     description: "Primary rabi season crop in North India"
   },
   {
@@ -59,7 +59,7 @@ const indianStates: IndianState[] = [
   {
     id: "c106",
     name: "Groundnut",
-    npkRequirement: { N: 25, P: 50, K: 75 },
+    npkRequirement: { N: 25, P: 50, K: 40 },
     description: "Major oilseed crop in South and Western India"
   },
   {
@@ -71,13 +71,13 @@ const indianStates: IndianState[] = [
   {
     id: "c108",
     name: "Potato",
-    npkRequirement: { N: 120, P: 80, K: 100 },
+    npkRequirement: { N: 150, P: 60, K: 120 },
     description: "Major vegetable crop across India"
   },
   {
     id: "c109",
     name: "Brinjal (Eggplant)",
-    npkRequirement: { N: 300, P: 50, K: 90 },
+    npkRequirement: { N: 120, P: 50, K: 90 },
     description: "Widely grown vegetable, thrives in warm climates; staple in Indian cuisine"
   }, // [1]
   {
@@ -95,13 +95,13 @@ const indianStates: IndianState[] = [
   {
     id: "c112",
     name: "Onion",
-    npkRequirement: { N: 125, P: 100, K: 100 },
+    npkRequirement: { N: 125, P: 80, K: 80 },
     description: "Essential bulb crop, grown in all seasons across India"
   }, // [4]
   {
     id: "c113",
     name: "Red Amaranth",
-    npkRequirement: { N: 400, P: 120, K: 120 },
+    npkRequirement: { N: 150, P: 80, K: 80 },
     description: "Leafy vegetable rich in iron and vitamins, grown for tender leaves"
   }, // [5] (40 g/m² ≈ 400 kg/ha; P and K at 120 kg/ha based on proportional application)
   {
@@ -131,7 +131,7 @@ const indianStates: IndianState[] = [
   {
     id: "c118",
     name: "Radish",
-    npkRequirement: { N: 200, P: 100, K: 50 },
+    npkRequirement: { N: 150, P: 80, K: 50 },
     description: "Fast-growing root vegetable, widely consumed raw or cooked"
   }, // [9]
   {

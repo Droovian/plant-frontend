@@ -33,24 +33,15 @@ type LandUnit = "Acre" | "Hectare" | "Bigha" | "Guntha"
 const unitConversions = {
   Acre: 0.4047,
   Hectare: 1,
-  Bigha: 0.25, // Standard North Indian Bigha approximation
+  Bigha: 0.6772,
   Guntha: 0.0101, // 1 Guntha = 1/40 Acre = 0.0101 hectares
 }
 
-// pH adjustment factors for NPK requirements
-const phAdjustmentFactors = {
-  N: {
-    low: (ph: number) => ph < 6 ? 1.2 : 1, // Increase N in acidic soils
-    high: (ph: number) => ph > 7.5 ? 1.15 : 1, // Increase N in alkaline soils
-  },
-  P: {
-    low: (ph: number) => ph < 6 ? 1.3 : 1, // Increase P in acidic soils - phosphorus gets fixed
-    high: (ph: number) => ph > 7.5 ? 1.25 : 1, // Increase P in alkaline soils
-  },
-  K: {
-    low: (ph: number) => ph < 6 ? 1.1 : 1, // Slight increase in acidic soils
-    high: (ph: number) => ph > 7.5 ? 1.05 : 1, // Slight increase in alkaline soils
-  }
+interface FertilizerResult {
+  quantity: string;
+  originalCost: string;
+  subsidy: string;
+  subsidizedCost: string;
 }
 
 const FertilizerCalculator = () => {
@@ -80,8 +71,8 @@ const FertilizerCalculator = () => {
   const [result, setResult] = useState<Record<string, { 
     quantity: string; 
     originalCost: string;
-    subsidizedCost: string;
     subsidy: string;
+    subsidizedCost: string;
   }> | null>(null)
 
   useEffect(() => {
@@ -93,117 +84,163 @@ const FertilizerCalculator = () => {
   }, [])
 
   const calculateFertilizer = () => {
-    setLoading(true)
-    setTimeout(() => {
-      // Convert plot size to hectares for standardized calculation
-      const sizeInHectares = plotSize * unitConversions[unit]
-      
-      // Apply pH adjustments to NPK requirements
-      const adjustedNPK = {
-        N: npkValues.N * (soilPH < 6 ? phAdjustmentFactors.N.low(soilPH) : phAdjustmentFactors.N.high(soilPH)),
-        P: npkValues.P * (soilPH < 6 ? phAdjustmentFactors.P.low(soilPH) : phAdjustmentFactors.P.high(soilPH)),
-        K: npkValues.K * (soilPH < 6 ? phAdjustmentFactors.K.low(soilPH) : phAdjustmentFactors.K.high(soilPH)),
+  setLoading(true);
+  try {
+    // Convert plot size to hectares
+    const plotSizeInHectares = plotSize * unitConversions[unit];
+
+    // Adjust NPK requirements based on soil pH
+    const adjustedNPK: NPKValues = {
+      N: npkValues.N,
+      P: npkValues.P,
+      K: npkValues.K,
+    };
+
+    if (soilPH < 6) {
+      adjustedNPK.P *= 1.1; // Increase P by 10%
+      adjustedNPK.N *= 0.95; // Reduce N by 5%
+    } else if (soilPH > 7.5) {
+      adjustedNPK.N *= 1.1; // Increase N by 10%
+      adjustedNPK.K *= 1.1; // Increase K by 10%
+      adjustedNPK.P *= 0.9; // Reduce P by 10%
+    }
+
+    // Calculate total NPK required in kg
+    const totalNPKRequired = {
+      N: adjustedNPK.N * plotSizeInHectares,
+      P: adjustedNPK.P * plotSizeInHectares,
+      K: adjustedNPK.K * plotSizeInHectares,
+    };
+
+    // Initialize result object
+    const fertilizerRecommendations: Record<string, FertilizerResult> = {};
+
+    // Helper function to calculate costs
+    const calculateCosts = (
+      fertilizerName: string,
+      totalKg: number,
+      bagWeightKg: number,
+      costPerBag: number,
+      fertilizerId?: string
+    ) => {
+      const bags = Math.ceil(totalKg / bagWeightKg);
+      const actualKg = bags * bagWeightKg;
+      const originalCost = bags * costPerBag;
+
+      // Find subsidy for the fertilizer in the selected state
+      const subsidyData = regionalFertilizers.find(
+        (rf) => rf.stateId === selectedState.id && rf.fertilizerId === fertilizerId
+      );
+      const subsidyPercentage = subsidyData ? subsidyData.subsidyPercentage : 0;
+      const subsidyAmount = (originalCost * subsidyPercentage) / 100;
+      const subsidizedCost = originalCost - subsidyAmount;
+
+      return {
+        quantity: `${bags} bag${bags > 1 ? 's' : ''} (${actualKg.toFixed(1)} kg)`,
+        originalCost: `₹${originalCost.toFixed(2)}`,
+        subsidy: `₹${subsidyAmount.toFixed(2)} (${subsidyPercentage}%)`,
+        subsidizedCost: `₹${subsidizedCost.toFixed(2)}`,
+      };
+    };
+
+    // Step 1: Fulfill Phosphorus with DAP
+    const dap = fertilizers.find((f) => f.name === "DAP (Diammonium Phosphate)");
+    if (dap && totalNPKRequired.P > 0) {
+      const pFromDAP = dap.composition.P / 100;
+      const dapKg = totalNPKRequired.P / pFromDAP;
+      fertilizerRecommendations[dap.name] = calculateCosts(
+        dap.name,
+        dapKg,
+        dap.bagWeightKg,
+        dap.costPerBag,
+        dap.id
+      );
+
+      const actualDAPKg = Math.ceil(dapKg / dap.bagWeightKg) * dap.bagWeightKg;
+      totalNPKRequired.P -= actualDAPKg * pFromDAP;
+      totalNPKRequired.N -= actualDAPKg * (dap.composition.N / 100);
+      totalNPKRequired.K -= actualDAPKg * (dap.composition.K / 100);
+    }
+
+    // Step 2: Fulfill Potassium with MOP
+    const mop = fertilizers.find((f) => f.name === "MOP (Muriate of Potash)");
+    if (mop && totalNPKRequired.K > 0) {
+      const kFromMOP = mop.composition.K / 100;
+      const mopKg = totalNPKRequired.K / kFromMOP;
+      fertilizerRecommendations[mop.name] = calculateCosts(
+        mop.name,
+        mopKg,
+        mop.bagWeightKg,
+        mop.costPerBag,
+        mop.id
+      );
+
+      const actualMOPKg = Math.ceil(mopKg / mop.bagWeightKg) * mop.bagWeightKg;
+      totalNPKRequired.K -= actualMOPKg * kFromMOP;
+      totalNPKRequired.N -= actualMOPKg * (mop.composition.N / 100);
+      totalNPKRequired.P -= actualMOPKg * (mop.composition.P / 100);
+    }
+
+    // Step 3: Fulfill Nitrogen with Urea
+    const urea = fertilizers.find((f) => f.name === "Urea");
+    if (urea && totalNPKRequired.N > 0) {
+      const nFromUrea = urea.composition.N / 100;
+      const ureaKg = totalNPKRequired.N / nFromUrea;
+      fertilizerRecommendations[urea.name] = calculateCosts(
+        urea.name,
+        ureaKg,
+        urea.bagWeightKg,
+        urea.costPerBag,
+        urea.id
+      );
+
+      const actualUreaKg = Math.ceil(ureaKg / urea.bagWeightKg) * urea.bagWeightKg;
+      totalNPKRequired.N -= actualUreaKg * nFromUrea;
+      totalNPKRequired.P -= actualUreaKg * (urea.composition.P / 100);
+      totalNPKRequired.K -= actualUreaKg * (urea.composition.K / 100);
+    }
+
+    // Step 4: Soil pH amendments (lime or gypsum)
+    // Assume typical costs since not in fertilizers data
+    const amendmentCostPerBag = 300; // ₹300 per 50 kg bag (approximate market rate)
+    const amendmentBagWeight = 50; // Standard 50 kg bag
+    if (soilPH < 6) {
+      const limeKg = 1000 * plotSizeInHectares; // 1000 kg/ha for pH correction
+      fertilizerRecommendations["Lime (Agricultural Grade)"] = calculateCosts(
+        "Lime (Agricultural Grade)",
+        limeKg,
+        amendmentBagWeight,
+        amendmentCostPerBag
+        // No fertilizerId, so no subsidy applied
+      );
+    } else if (soilPH > 7.5) {
+      const gypsumKg = 500 * plotSizeInHectares; // 500 kg/ha for pH correction
+      fertilizerRecommendations["Gypsum"] = calculateCosts(
+        "Gypsum",
+        gypsumKg,
+        amendmentBagWeight,
+        amendmentCostPerBag
+        // No fertilizerId, so no subsidy applied
+      );
+    }
+
+    // Remove zero-bag recommendations
+    Object.keys(fertilizerRecommendations).forEach((key) => {
+      const bags = parseInt(fertilizerRecommendations[key].quantity);
+      if (bags === 0) {
+        delete fertilizerRecommendations[key];
       }
-      
-      let remainingN = adjustedNPK.N * sizeInHectares
-      let remainingP = adjustedNPK.P * sizeInHectares
-      let remainingK = adjustedNPK.K * sizeInHectares
+    });
 
-      const requiredFertilizers: Record<string, { 
-        quantity: string; 
-        originalCost: string;
-        subsidizedCost: string;
-        subsidy: string;
-      }> = {}
-
-      // Get available fertilizers for the selected state
-      const availableFertilizers = regionalFertilizers
-        .filter(rf => rf.stateId === selectedState.id)
-        .map(rf => ({
-          ...fertilizers.find(f => f.id === rf.fertilizerId)!,
-          subsidy: rf.subsidyPercentage
-        }))
-
-      const P2O5_TO_P = 0.436;
-      const K2O_TO_K = 0.83;
-
-      // Calculate the "nutrient fulfillment score" for each fertilizer
-      const sortedFertilizers = [...availableFertilizers].sort((a, b) => {
-          if (a.subsidy !== b.subsidy) return b.subsidy - a.subsidy;
-
-          // Calculate "weighted" nutrient value based on what is still needed
-          const aN = a.composition.N;
-          const aP = a.composition.P * P2O5_TO_P;
-          const aK = a.composition.K * K2O_TO_K;
-          const bN = b.composition.N;
-          const bP = b.composition.P * P2O5_TO_P;
-          const bK = b.composition.K * K2O_TO_K;
-
-          // Use remainingN, remainingP, remainingK from your context
-          const aScore = (
-            (remainingN > 0 ? aN : 0) +
-            (remainingP > 0 ? aP : 0) +
-            (remainingK > 0 ? aK : 0)
-          ) / a.costPerBag;
-
-          const bScore = (
-            (remainingN > 0 ? bN : 0) +
-            (remainingP > 0 ? bP : 0) +
-            (remainingK > 0 ? bK : 0)
-          ) / b.costPerBag;
-
-          return bScore - aScore;
-      });
-
-      sortedFertilizers.forEach((fertilizer) => {
-        if (remainingN <= 0 && remainingP <= 0 && remainingK <= 0) return
-
-        const { N, P, K } = fertilizer.composition
-        const bagWeight = fertilizer.bagWeightKg
-        const bagCost = fertilizer.costPerBag
-        const subsidy = fertilizer.subsidy / 100 // Convert percentage to decimal
-
-        const nutrientNPerBag = (N / 100) * bagWeight;
-        const P2O5_to_P = 0.436 // Conversion factor
-        const nutrientPPerBag = (P / 100) * bagWeight * P2O5_to_P
-        const K2O_to_K = 0.83
-        const nutrientKPerBag = (K / 100) * bagWeight * K2O_to_K
-
-        let requiredBags = 0
-
-        // Calculate required bags based on remaining nutrients
-        if (nutrientNPerBag > 0 && remainingN > 0) requiredBags = Math.max(requiredBags, remainingN / nutrientNPerBag)
-        if (nutrientPPerBag > 0 && remainingP > 0) requiredBags = Math.max(requiredBags, remainingP / nutrientPPerBag)
-        if (nutrientKPerBag > 0 && remainingK > 0) requiredBags = Math.max(requiredBags, remainingK / nutrientKPerBag)
-
-        requiredBags = Number(requiredBags.toFixed(2))
-        // Round up to the nearest whole number
-        
-        if (requiredBags > 0) {
-          // Adjust remaining nutrients
-          remainingN = Math.max(0, remainingN - requiredBags * nutrientNPerBag)
-          remainingP = Math.max(0, remainingP - requiredBags * nutrientPPerBag)
-          remainingK = Math.max(0, remainingK - requiredBags * nutrientKPerBag)
-
-          // Calculate costs
-          const totalWeight = requiredBags * bagWeight
-          const originalCost = requiredBags * bagCost
-          const subsidyAmount = originalCost * subsidy
-          const subsidizedCost = originalCost - subsidyAmount
-
-          requiredFertilizers[fertilizer.name] = {
-            quantity: totalWeight.toFixed(2) + " kg",
-            originalCost: "₹" + originalCost.toFixed(2),
-            subsidizedCost: "₹" + subsidizedCost.toFixed(2),
-            subsidy: "₹" + subsidyAmount.toFixed(2) + " (" + (subsidy * 100).toFixed(0) + "%)",
-          }
-        }
-      })
-
-      setResult(requiredFertilizers)
-      setLoading(false)
-    }, 1000)
+    // Set the result
+    setResult(fertilizerRecommendations);
+  } catch (error) {
+    console.error("Error calculating fertilizer:", error);
+    setResult(null);
+  } finally {
+    setLoading(false);
   }
+};
 
   const fetchSelectedPlants = useCallback(async () => {
     try {
@@ -505,10 +542,7 @@ const FertilizerCalculator = () => {
               </View>
               
               {Object.entries(result).map(([fertilizer, details]) => (
-                <View
-                  key={fertilizer}
-                  className="p-3 border-b border-gray-100"
-                >
+                <View key={fertilizer} className="p-3 border-b border-gray-100">
                   <View className="flex-row justify-between items-center">
                     <View className="flex-row items-center flex-1">
                       <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mr-3">
@@ -520,7 +554,6 @@ const FertilizerCalculator = () => {
                       </View>
                     </View>
                   </View>
-                  
                   <View className="mt-2 ml-12">
                     <View className="flex-row justify-between">
                       <Text className="text-gray-500">Original Cost:</Text>
@@ -541,6 +574,11 @@ const FertilizerCalculator = () => {
               <View className="mt-4 p-3 bg-green-50 rounded-lg">
                 <Text className="text-green-800 text-sm">
                   Visit your nearest Krishi Vigyan Kendra or Agricultural Extension Center for more information on these fertilizers and subsidy schemes.
+                </Text>
+              </View>
+              <View className="mt-2 p-3 bg-red-50 rounded-lg">
+                <Text className="text-red-800 text-sm">
+                  Costs and subsidies may vary due to regional differences and policy changes. Please confirm with local agricultural authorities for accurate pricing.
                 </Text>
               </View>
             </View>
