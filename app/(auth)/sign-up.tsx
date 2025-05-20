@@ -3,14 +3,33 @@ import { Text, View, Alert, ScrollView } from 'react-native'
 import { Link } from 'expo-router'
 import { useSignUp } from '@clerk/clerk-expo'
 import { useRouter } from 'expo-router'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import CustomButton from '@/components/Button'
 import InputField from '@/components/InputField'
 import { ReactNativeModal } from "react-native-modal";
 import { icons } from '@/constants'
 
+import { Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+
+// Configure how notifications are displayed when app is foreground
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
 export default function SignUpScreen() {
+
+  const [expoPushToken, setExpoPushToken] = useState('');
+  const [notification, setNotification] = useState<Notifications.Notification | null>(null);
+  const notificationListener = useRef<Notifications.Subscription | null>(null);
+  const responseListener = useRef<Notifications.Subscription | null>(null);
+
   const { isLoaded, signUp, setActive } = useSignUp()
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const router = useRouter()
@@ -25,6 +44,31 @@ export default function SignUpScreen() {
     error: "",
     code: "",
   });
+
+  useEffect(() => {
+    registerForPushNotificationsAsync().then(token => {
+      if (token) {
+        setExpoPushToken(token);
+      }
+    });
+
+    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      setNotification(notification);
+    });
+
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log(response);
+    });
+
+    return () => {
+      if (notificationListener.current) {
+        Notifications.removeNotificationSubscription(notificationListener.current);
+      }
+      if (responseListener.current) {
+        Notifications.removeNotificationSubscription(responseListener.current);
+      }
+    };
+  }, []);
 
   // Handle submission of sign-up form
   const onSignUpPress = async () => {
@@ -63,6 +107,7 @@ export default function SignUpScreen() {
             clerkId: completeSignUp.createdUserId,
             name: form.name,
             email: form.email,
+            token: expoPushToken
           }),
           headers: {
             "Content-Type": "application/json",
@@ -96,116 +141,149 @@ export default function SignUpScreen() {
 
   return (
     <ScrollView className="flex-1 bg-white">
-    <View className="flex-1 bg-white">
-      <View className="relative w-full h-[250px]">
-        <Text className="text-2xl text-black font-JakartaSemiBold absolute bottom-5 left-5">
-          Create Your Account
-        </Text>
-      </View>
-      <View className="p-5">
-        <InputField
-          label="Name"
-          placeholder="Enter name"
-          icon={icons.person}
-          value={form.name}
-          onChangeText={(value) => setForm({ ...form, name: value })}
-        />
-        <InputField
-          label="Email"
-          placeholder="Enter email"
-          icon={icons.email}
-          textContentType="emailAddress"
-          value={form.email}
-          onChangeText={(value) => setForm({ ...form, email: value })}
-        />
-        <InputField
-          label="Password"
-          placeholder="Enter password"
-          icon={icons.lock}
-          secureTextEntry={true}
-          textContentType="password"
-          value={form.password}
-          onChangeText={(value) => setForm({ ...form, password: value })}
-        />
-        <CustomButton
-          title="Sign Up"
-          bgVariant='plant'
-          onPress={onSignUpPress}
-          className="mt-6"
-        />
-        <Link
-          href="/sign-in"
-          className="text-lg text-center text-general-200 mt-10"
-        >
-          Already have an account?{" "}
-          <Text className="text-primary-500">Log In</Text>
-        </Link>
-      </View>
-      <ReactNativeModal
-        isVisible={verification.state === "pending"}
-        // onBackdropPress={() =>
-        //   setVerification({ ...verification, state: "default" })
-        // }
-        onModalHide={() => {
-          if (verification.state === "success") {
-            setShowSuccessModal(true);
-          }
-        }}
-      >
-        <View className="bg-white px-7 py-9 rounded-2xl min-h-[300px]">
-          <Text className="font-JakartaExtraBold text-2xl mb-2">
-            Verification
+      <View className="flex-1 bg-white">
+        <View className="relative w-full h-[250px]">
+          <Text className="text-2xl text-black font-JakartaSemiBold absolute bottom-5 left-5">
+            Create Your Account
           </Text>
-          <Text className="font-Jakarta mb-5">
-            We've sent a verification code to {form.email}.
-          </Text>
-          <InputField
-            label={"Code"}
-            icon={icons.lock}
-            placeholder={"12345"}
-            value={verification.code}
-            keyboardType="numeric"
-            onChangeText={(code) =>
-              setVerification({ ...verification, code })
-            }
-          />
-          {verification.error && (
-            <Text className="text-red-500 text-sm mt-1">
-              {verification.error}
-            </Text>
-          )}
-          <CustomButton
-            title="Verify Email"
-            bgVariant='plant'
-            onPress={onPressVerify}
-            className="mt-5 bg-success-500"
-          />
         </View>
-      </ReactNativeModal>
-      <ReactNativeModal isVisible={showSuccessModal}>
-        <View className="bg-white px-7 py-9 rounded-2xl min-h-[300px]">
-          {/* <Image
+        <View className="p-5">
+          <InputField
+            label="Name"
+            placeholder="Enter name"
+            icon={icons.person}
+            value={form.name}
+            onChangeText={(value) => setForm({ ...form, name: value })}
+          />
+          <InputField
+            label="Email"
+            placeholder="Enter email"
+            icon={icons.email}
+            textContentType="emailAddress"
+            value={form.email}
+            onChangeText={(value) => setForm({ ...form, email: value })}
+          />
+          <InputField
+            label="Password"
+            placeholder="Enter password"
+            icon={icons.lock}
+            secureTextEntry={true}
+            textContentType="password"
+            value={form.password}
+            onChangeText={(value) => setForm({ ...form, password: value })}
+          />
+          <CustomButton
+            title="Sign Up"
+            bgVariant='plant'
+            onPress={onSignUpPress}
+            className="mt-6"
+          />
+          <Link
+            href="/sign-in"
+            className="text-lg text-center text-general-200 mt-10"
+          >
+            Already have an account?{" "}
+            <Text className="text-primary-500">Log In</Text>
+          </Link>
+        </View>
+        <ReactNativeModal
+          isVisible={verification.state === "pending"}
+          // onBackdropPress={() =>
+          //   setVerification({ ...verification, state: "default" })
+          // }
+          onModalHide={() => {
+            if (verification.state === "success") {
+              setShowSuccessModal(true);
+            }
+          }}
+        >
+          <View className="bg-white px-7 py-9 rounded-2xl min-h-[300px]">
+            <Text className="font-JakartaExtraBold text-2xl mb-2">
+              Verification
+            </Text>
+            <Text className="font-Jakarta mb-5">
+              We've sent a verification code to {form.email}.
+            </Text>
+            <InputField
+              label={"Code"}
+              icon={icons.lock}
+              placeholder={"12345"}
+              value={verification.code}
+              keyboardType="numeric"
+              onChangeText={(code) =>
+                setVerification({ ...verification, code })
+              }
+            />
+            {verification.error && (
+              <Text className="text-red-500 text-sm mt-1">
+                {verification.error}
+              </Text>
+            )}
+            <CustomButton
+              title="Verify Email"
+              bgVariant='plant'
+              onPress={onPressVerify}
+              className="mt-5 bg-success-500"
+            />
+          </View>
+        </ReactNativeModal>
+        <ReactNativeModal isVisible={showSuccessModal}>
+          <View className="bg-white px-7 py-9 rounded-2xl min-h-[300px]">
+            {/* <Image
             source={images.check}
             className="w-[110px] h-[110px] mx-auto my-5"
           /> */}
-          <Text className="text-3xl font-JakartaBold text-center">
-            Verified
-          </Text>
-          <Text className="text-base text-gray-400 font-Jakarta text-center mt-2">
-            You have successfully verified your account.
-          </Text>
-          <CustomButton
-            title="Browse Home"
-            bgVariant='plant'
-            onPress={() => {
-              setShowSuccessModal(false);
-              router.push(`/(root)/(tabs)/home`)
-            }}
-            className="mt-5"
-          />
-        </View>
-      </ReactNativeModal>
-    </View>
-  </ScrollView>
+            <Text className="text-3xl font-JakartaBold text-center">
+              Verified
+            </Text>
+            <Text className="text-base text-gray-400 font-Jakarta text-center mt-2">
+              You have successfully verified your account.
+            </Text>
+            <CustomButton
+              title="Browse Home"
+              bgVariant='plant'
+              onPress={() => {
+                setShowSuccessModal(false);
+                router.push(`/(root)/(tabs)/home`)
+              }}
+              className="mt-5"
+            />
+          </View>
+        </ReactNativeModal>
+      </View>
+    </ScrollView>
   )
+}
+
+// This function asks for permission and gets the token
+async function registerForPushNotificationsAsync() {
+  let token;
+
+  if (Device.isDevice) {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== 'granted') {
+      alert('Failed to get push token for push notification!');
+      return;
+    }
+    token = (await Notifications.getExpoPushTokenAsync()).data;
+    console.log(token);
+  } else {
+    alert('Must use physical device for Push Notifications');
+  }
+
+  if (Platform.OS === 'android') {
+    Notifications.setNotificationChannelAsync('default', {
+      name: 'default',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FF231F7C',
+    });
+  }
+
+  return token;
 }
