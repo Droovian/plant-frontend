@@ -128,9 +128,9 @@ const HomePage = () => {
         </SignedOut>
       </ScrollView>
 
-      <Modal visible={showPlantModal} animationType="slide">
+      {/* <Modal visible={showPlantModal} animationType="slide">
         <PlantSelectionScreen onComplete={handlePlantSelectionComplete} />
-      </Modal>
+      </Modal> */}
     </SafeAreaView>
   )
 }
