@@ -26,9 +26,10 @@ interface WeatherData {
 interface WeatherBannerProps {
   weather: WeatherData
   address: any 
+  style?: React.CSSProperties
 }
 
-const WeatherBanner: React.FC<WeatherBannerProps> = ({ weather, address }) => {
+const WeatherBanner: React.FC<WeatherBannerProps> = ({ weather, address, style }) => {
   return (
     <View className="bg-blue-500 rounded-3xl p-4 mb-6">
       <View className="flex-row justify-between items-center mb-4">

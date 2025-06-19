@@ -14,6 +14,9 @@ import { Calendar } from 'react-native-calendars';
 import useWeather from '@/hooks/useWeather';
 import WeatherBanner from '@/components/WeatherBanner';
 import CustomButton from '@/components/Button';
+import { LinearGradient } from 'expo-linear-gradient';
+import { compatibility } from '@/assets/data/plant';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 const BASE_CELL_SIZE = Dimensions.get('window').width < 375 ? 40 : 48;
 
 interface LayoutData {
@@ -318,33 +321,72 @@ const LayoutDetail = () => {
     }
 };
 
+  const getBorderStyle = (row: number, col: number, plantName: string) => {
+    if (!plantName) return { isCompanion: false, shouldAvoid: false };
+    const compInfo = compatibility[0][plantName] || { companions: [], avoid: [] };
+    let isCompanion = false;
+    let shouldAvoid = false;
+    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    layout?.grid.rows.forEach((r, ri) => {
+      r.forEach((c, ci) => {
+        if (directions.some(([dr, dc]) => ri === row + dr && ci === col + dc) && c.plantName) {
+          if (compInfo.companions && compInfo.companions.includes(c.plantName)) isCompanion = true;
+          if (compInfo.avoid && compInfo.avoid.includes(c.plantName)) shouldAvoid = true;
+        }
+      });
+    });
+    return { isCompanion, shouldAvoid };
+  };
+
+  const showTooltip = (rowIndex: number, colIndex: number, message: string) => {
+    // Implement tooltip logic (e.g., using a state and absolute positioning)
+    Alert.alert('Plant Info', message); // Placeholder
+  };
+
   const renderGrid = useCallback(() => {
-    if (!layout) return null;
+  if (!layout) return null;
+  const { grid, width, height } = layout;
+  const maxCells = 20;
+  const cellSize = Math.min(
+    BASE_CELL_SIZE,
+    (Dimensions.get('window').width - 32) / Math.min(width, maxCells),
+    (Dimensions.get('window').height / 4) / Math.min(height, maxCells)
+  );
 
-    const { grid, width, height } = layout;
-    const maxCells = 20;
-    const cellSize = Math.min(
-      BASE_CELL_SIZE,
-      (Dimensions.get('window').width - 32) / Math.min(width, maxCells),
-      (Dimensions.get('window').height / 4) / Math.min(height, maxCells)
-    );
-
-    return grid.rows.map((row, rowIndex) => (
-      <View key={rowIndex} className="flex-row justify-center">
-        {row.map((cell, colIndex) => (
-          <View key={colIndex} className="border border-gray-300 bg-white justify-center items-center" style={{ width: cellSize, height: cellSize }}>
-            {cell.plantName && (
-              <Image
-                source={plants.find((v) => v.name === cell.plantName)?.image}
-                className="w-4/5 h-4/5"
-                resizeMode="contain"
-              />
-            )}
-          </View>
-        ))}
-      </View>
-    ));
-  }, [layout]);
+  return (
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 300 }}
+    >
+      {grid.rows.map((row, rowIndex) => (
+        <View key={rowIndex} className="flex-row justify-center">
+          {row.map((cell, colIndex) => {
+            const plant = plants.find((v) => v.name === cell.plantName);
+            const { isCompanion, shouldAvoid } = getBorderStyle(rowIndex, colIndex, cell.plantName);
+            return (
+              <TouchableOpacity
+                key={colIndex}
+                onPress={() => showTooltip(rowIndex, colIndex, plant?.name || 'Empty')}
+                className={`border-2 ${isCompanion ? 'border-green-400' : shouldAvoid ? 'border-red-400' : 'border-gray-300'} bg-white justify-center items-center rounded-md m-0.5`}
+                style={{ width: cellSize, height: cellSize }}
+                activeOpacity={0.8}
+              >
+                {cell.plantName && plant?.image && (
+                  <Image
+                    source={plant.image}
+                    className="w-4/5 h-4/5"
+                    resizeMode="contain"
+                  />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ))}
+    </MotiView>
+  );
+}, [layout]);
 
   const logWatering = (plantName: string) => {
     if (waterLevels[plantName]) {
@@ -433,33 +475,65 @@ const LayoutDetail = () => {
 
 
   const renderColorLegend = useCallback(() => {
-    const colorMap = generateColorMap();
-
-    return (
-      <View className="flex-row flex-wrap mt-2 justify-around">
-        {Object.entries(colorMap).map(([plantName, color]) => (
-          <View key={plantName} className="flex-row items-center m-1">
-            <View className="w-3 h-3 rounded-full mr-1" style={{ backgroundColor: color }} />
-            <Text className="text-xs text-gray-600">{plantName}</Text>
-          </View>
-        ))}
-      </View>
-    );
-  }, [generateColorMap]);
+  const colorMap = generateColorMap();
+  return (
+    <View className="flex-row flex-wrap justify-start">
+      {Object.entries(colorMap).map(([plantName, color]) => (
+        <View key={plantName} className="flex-row items-center mr-3 mb-2">
+          <View className="w-3 h-3 rounded-full mr-1" style={{ backgroundColor: color }} />
+          <Text className="text-xs text-gray-600">{plantName}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}, [generateColorMap]);
 
   return (
-    <SafeAreaView className="flex-1 bg-green-50" style={{ paddingTop: insets.top }}>
+    <LinearGradient
+      colors={['#D1FAE5', '#F0FFF4']}
+      className="flex-1"
+      style={{ paddingTop: insets.top }}
+    >
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}>
       {loading ? (
         <ActivityIndicator size="large" color="#4CAF50" className="mt-10" />
       ) : (
         <ScrollView contentContainerStyle={{ padding: 20 }}>
-          <Text className="text-2xl font-semibold text-gray-800 my-3">Your Garden!</Text>
+          <MotiView
+            from={{ opacity: 0, translateY: -20 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'spring', delay: 100 }}
+            className="my-4 mx-auto"
+          >
+            <Text className="text-3xl font-bold text-green-800">
+              {'My Garden Layout'}
+            </Text>
+            <Text className="text-sm text-gray-500 mt-1">
+              Created: {layout?.createdAt ? new Date(layout.createdAt).toLocaleDateString() : 'N/A'}
+            </Text>
+          </MotiView>
           
-          {(weather && address) ? (
-            <WeatherBanner weather={weather} address={address} />
-          ) : (
-            <Text>Loading weather data...</Text>
-          )}
+          <MotiView
+            from={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', delay: 200 }}
+            className="my-4"
+          >
+            {(weather && address) ? (
+              <WeatherBanner weather={weather} address={address} style={{
+                backgroundColor: '#E6F3FA',
+                borderRadius: 12,
+                padding: 16,
+              }} />
+            ) : error ? (
+              <Text className="text-red-500 text-center">Weather data unavailable</Text>
+            ) : (
+              <View className="h-24 justify-center items-center bg-gray-100 rounded-lg">
+                <ActivityIndicator size="small" color="#4CAF50" />
+                <Text className="text-gray-600 mt-2">Loading weather...</Text>
+              </View>
+            )}
+          </MotiView>
           
           <View className="my-4">
             <Text className="text-lg font-semibold text-gray-700 mb-2">Garden Layout:</Text>
@@ -468,68 +542,85 @@ const LayoutDetail = () => {
             </View>
           </View>
           
-          <View className="mt-4 bg-white p-4 rounded-lg shadow-sm">
-            <Text className="text-lg font-semibold text-gray-700 mb-2">Watering Schedule:</Text>
-            <Calendar
-              style={{
-                borderRadius: 10,
-                elevation: 2,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.22,
-                shadowRadius: 2.22,
-              }}
-              theme={{
-                backgroundColor: '#ffffff',
-                calendarBackground: '#ffffff',
-                textSectionTitleColor: '#16a34a',
-                selectedDayBackgroundColor: '#16a34a',
-                selectedDayTextColor: '#ffffff',
-                todayTextColor: '#16a34a',
-                dayTextColor: '#2d4150',
-                dotColor: '#16a34a',
-                selectedDotColor: '#ffffff',
-              }}
-              markedDates={Object.keys(wateringSchedule).reduce(
-                (acc: { [key: string]: { dots: { color: string }[]; marked: boolean } }, date) => { // Explicitly type acc
-                  acc[date] = {
-                    dots: wateringSchedule[date].dots,
-                    marked: wateringSchedule[date].marked,
-                  };
-                  return acc;
-                },
-                {}
-              )}
-              markingType={'multi-dot'}
-            />
-            {renderColorLegend()}
-            <View className='flex flex-row justify-center mt-2'>
-              <View className="bg-black w-3 h-3 rounded-full mr-1" />
-              <Text className='text-xs text-gray-600 text-center'>Today</Text>
-            </View>
-          </View>
+          <MotiView
+              from={{ opacity: 0, translateY: 20 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ type: 'spring', delay: 400 }}
+              className="mt-6 bg-white p-5 rounded-2xl shadow-md"
+            >
+              <Text className="text-xl font-bold text-green-800 mb-3">Watering Schedule</Text>
+              <Calendar
+                style={{
+                  borderRadius: 12,
+                  backgroundColor: '#F9FAFB',
+                }}
+                theme={{
+                  backgroundColor: '#F9FAFB',
+                  calendarBackground: '#F9FAFB',
+                  textSectionTitleColor: '#16A34A',
+                  selectedDayBackgroundColor: '#16A34A',
+                  selectedDayTextColor: '#FFFFFF',
+                  todayTextColor: '#16A34A',
+                  dayTextColor: '#1F2937',
+                  dotColor: '#16A34A',
+                  selectedDotColor: '#FFFFFF',
+                  textDayFontWeight: '500',
+                }}
+                markedDates={Object.keys(wateringSchedule).reduce(
+                  (acc: { [key: string]: { dots: { color: string }[]; marked: boolean } }, date) => {
+                    acc[date] = {
+                      dots: wateringSchedule[date].dots,
+                      marked: wateringSchedule[date].marked,
+                    };
+                    return acc;
+                  },
+                  {}
+                )}
+                markingType={'multi-dot'}
+              />
+              <View className="mt-3 bg-gray-100 p-3 rounded-lg">
+                <Text className="text-sm font-semibold text-gray-700 mb-2">Legend</Text>
+                {renderColorLegend()}
+                <View className="flex-row items-center justify-center mt-2">
+                  <View className="bg-black w-3 h-3 rounded-full mr-1" />
+                  <Text className="text-xs text-gray-600">Today</Text>
+                </View>
+              </View>
+            </MotiView>
           
-          <View className="mt-4 bg-white p-4 rounded-lg shadow-sm">
-            <Text className="text-lg font-semibold text-gray-700 mb-2">Watering Recommendations:</Text>
+         <MotiView
+            from={{ opacity: 0, translateY: 20 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'spring', delay: 500 }}
+            className="mt-6 bg-white p-5 rounded-2xl shadow-md"
+          >
+            <Text className="text-xl font-bold text-green-800 mb-3">Watering Recommendations</Text>
             {wateringInsights.length > 0 ? (
               wateringInsights.map((insight, index) => (
-                <View key={index} className="flex-row mb-2 items-start">
-                  <View className="w-2 h-2 rounded-full bg-green-600 mt-2 mr-2" />
-                  <Text className="text-sm text-gray-600 flex-1">{insight}</Text>
-                </View>
+                <TouchableOpacity
+                  key={index}
+                  className="flex-row items-center bg-gray-50 p-3 rounded-lg mb-2"
+                  activeOpacity={0.9}
+                >
+                  <MaterialCommunityIcons
+                    name={insight.includes('water') ? 'water' : insight.includes('heat') ? 'weather-sunny' : 'leaf'}
+                    size={20}
+                    color="#16A34A"
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text className="text-sm text-gray-700 flex-1">{insight}</Text>
+                </TouchableOpacity>
               ))
             ) : (
-              <Text className="text-sm text-gray-600 mb-1">
-                No recommendations available yet. Generate insights to see watering recommendations.
-              </Text>
+              <Text className="text-sm text-gray-500 italic">Generate insights to see recommendations.</Text>
             )}
             <CustomButton
-              title="Generate Watering Insights"
-              bgVariant='plant'
-              onPress={generateWateringInsights} 
-              style={{ marginTop: 10 }}
+              title="Generate Insights"
+              bgVariant="plant"
+              onPress={generateWateringInsights}
+              className="mt-4 py-3 rounded-xl"
             />
-          </View>
+          </MotiView>
           
           <View className="mt-4">
             <Text className="text-lg font-semibold text-gray-700 mb-2">My Plants:</Text>
@@ -539,15 +630,15 @@ const LayoutDetail = () => {
           <View className="h-16" />
         </ScrollView>
       )}
-
-      <TouchableOpacity
+    </ScrollView>
+    <TouchableOpacity
         onPress={() => router.back()}
         className="absolute top-4 left-4 bg-white rounded-full p-3 shadow-lg"
         style={{ marginTop: insets.top }}
       >
         <Ionicons name="arrow-back" size={24} color="#16a34a" />
       </TouchableOpacity>
-    </SafeAreaView>
+    </LinearGradient>
   );
 };
 

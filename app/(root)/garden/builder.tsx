@@ -277,9 +277,12 @@ const Builder = () => {
         ...(reason ? [reason] : []),
         ...(shouldAvoid ? [`Incompatible with: ${incompatiblePlants.join(', ')}`] : []),
       ];
+
+      if(shouldAvoid){
+        setHasIssue(true);
+      }
       
       if (allIssues.length > 0) {
-        setHasIssue(true);
         showTooltip(rowIndex, colIndex, allIssues.join('; '));
         setPlantIssues((prev) => [
           ...prev.filter(issue => issue.row !== rowIndex || issue.col !== colIndex),

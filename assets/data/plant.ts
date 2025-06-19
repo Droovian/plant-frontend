@@ -233,7 +233,7 @@ const indianStates: IndianState[] = [
   },
   {
     name: 'Red Amaranth',
-    image: null,
+    image: plantImages.redamaranthus,
     color: '#C5E1A5', // Borrowed from Lettuce for similar leafy greens
     noCount: 4,
     spacingFeet: 0.82,
@@ -259,7 +259,7 @@ const indianStates: IndianState[] = [
   },
   {
     name: 'Colocasia',
-    image: null,
+    image: plantImages.colocasia,
     color: '#C4E17F', // Borrowed from Asparagus for similar structure
     noCount: 1,
     spacingFeet: 6,
@@ -272,7 +272,7 @@ const indianStates: IndianState[] = [
   },
   {
     name: 'Tendli',
-    image: null,
+    image: plantImages.tendli,
     color: '#81C784', // Borrowed from Cucumber for similar vine
     noCount: 1,
     spacingFeet: 1.5,
@@ -285,7 +285,7 @@ const indianStates: IndianState[] = [
   },
   {
     name: 'Bitter Gourd',
-    image: null,
+    image: plantImages.bittergourd,
     color: '#81C784', // Borrowed from Cucumber for similar vine
     noCount: 1,
     spacingFeet: 1.5,
@@ -311,7 +311,7 @@ const indianStates: IndianState[] = [
   },
   {
     name: 'Basil',
-    image: null,
+    image: plantImages.basil,
     color: '#AED581', // Borrowed from Spinach for similar herb
     noCount: 4,
     spacingFeet: 1,
@@ -324,7 +324,7 @@ const indianStates: IndianState[] = [
   },
   {
     name: 'Pepper',
-    image: null,
+    image: plantImages.pepper,
     color: '#FFDBA4', // Borrowed from Chilli for similarity
     noCount: 1,
     spacingFeet: 1.5,
@@ -350,7 +350,7 @@ const indianStates: IndianState[] = [
   },
   {
     name: 'Sweet Potato',
-    image: null,
+    image: plantImages.sweetpotato,
     color: '#F0D9FF', // Borrowed from Potato
     noCount: 1,
     spacingFeet: 1.5,
@@ -376,7 +376,7 @@ const indianStates: IndianState[] = [
   },
   {
     name: 'Cabbage',
-    image: null,
+    image: plantImages.cabbage,
     color: '#C5E1A5', // Borrowed from Lettuce for similar leafy crop
     noCount: 1,
     spacingFeet: 1.5,
@@ -389,7 +389,7 @@ const indianStates: IndianState[] = [
   },
   {
     name: 'Carrot',
-    image: null,
+    image: plantImages.carrot,
     color: '#E57373', // Borrowed from Beet for similar root crop
     noCount: 16,
     spacingFeet: 0.25,
@@ -428,7 +428,7 @@ const indianStates: IndianState[] = [
   },
   {
     name: 'Ridge Gourd',
-    image: null,
+    image: plantImages.ridgegourd,
     color: '#81C784', // Borrowed from Cucumber
     noCount: 1,
     spacingFeet: 2,
@@ -441,7 +441,7 @@ const indianStates: IndianState[] = [
   },
   {
     name: 'Cauliflower',
-    image: null,
+    image: plantImages.Cauliflower,
     color: '#C5E1A5', // Borrowed from Lettuce
     noCount: 1,
     spacingFeet: 1.5,
@@ -454,7 +454,7 @@ const indianStates: IndianState[] = [
   },
   {
     name: 'Snake Gourd',
-    image: null,
+    image: plantImages.snakegourd,
     color: '#81C784', // Borrowed from Cucumber
     noCount: 1,
     spacingFeet: 2,
@@ -467,7 +467,7 @@ const indianStates: IndianState[] = [
   },
   {
     name: 'Green Chilli',
-    image: null,
+    image: plantImages.greenchilli,
     color: '#FFDBA4',
     noCount: 4, // Matches Chilli in vegetables
     spacingFeet: 1,

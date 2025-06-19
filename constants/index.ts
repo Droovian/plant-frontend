@@ -45,6 +45,19 @@ import Pumpkin from "@/assets/images/pumpkin.png";
 import Breadfruit from "@/assets/images/breadfruit.png";
 import Drumstick from "@/assets/images/drumstick.png";
 import Amaranth from "@/assets/images/redamaranthus.png";
+import Cauliflower from "@/assets/images/cauliflower.png";
+import redamaranthus from "@/assets/images/red-amaranthus.png";
+import bittergourd from "@/assets/images/bittergourd.png";
+import cabbage from "@/assets/images/cabbage.png";
+import sweetpotato from "@/assets/images/sweetpotato.png";
+import snakegourd from "@/assets/images/snake-gourd.png";
+import carrot from "@/assets/images/carrot.png";
+import greenchilli from "@/assets/images/greenchilli.png";
+import ridgegourd from "@/assets/images/ridge-gourd.png";
+import tendli from "@/assets/images/tendli.png";
+import basil from "@/assets/images/basil.png";
+import colocasia from "@/assets/images/colocasia.png"
+import pepper from "@/assets/images/pepper.png";
 
 export const images = {
     onboarding1: plant1,
@@ -75,6 +88,19 @@ export const plantImages = {
   Breadfruit: Breadfruit,
   Drumstick: Drumstick,
   Amaranth: Amaranth,
+  Cauliflower: Cauliflower,
+  redamaranthus: redamaranthus,
+  bittergourd: bittergourd,
+  cabbage: cabbage,
+  sweetpotato: sweetpotato,
+  snakegourd: snakegourd,
+  carrot: carrot,
+  greenchilli: greenchilli,
+  ridgegourd: ridgegourd,
+  tendli: tendli,
+  basil: basil,
+  colocasia: colocasia,
+  pepper: pepper,
 }
 
 export const icons = {
