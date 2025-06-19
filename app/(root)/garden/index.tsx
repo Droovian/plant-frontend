@@ -5,7 +5,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import useLocationStore from "@/store"
 import WeatherBanner from "@/components/WeatherBanner"
 import Plant from "@/components/Plants"
-import { Cloud, Sprout, Settings, Search, Sun, Droplets, Wind, AlertCircle } from "lucide-react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
 const Garden = () => {
@@ -71,7 +70,7 @@ const Garden = () => {
   if (errorMsg || addressErrorMsg) {
     return (
       <View className="flex-1 justify-center items-center bg-red-50" style={{ paddingTop: insets.top }}>
-        <AlertCircle size={48} color="#EF4444" />
+        {/* <AlertCircle size={48} color="#EF4444" /> */}
         <Text className="text-red-500 mt-4 text-center px-4 font-medium">{errorMsg || addressErrorMsg}</Text>
         <TouchableOpacity onPress={onRefresh} className="mt-4 bg-red-500 px-6 py-3 rounded-full">
           <Text className="text-white font-medium">Retry</Text>
@@ -124,7 +123,7 @@ const Garden = () => {
         <View className="mt-5 px-5 pb-5">
           <View className="flex-row justify-between items-center mb-4">
             <View className="flex-row items-center">
-              <Sprout size={24} color="#059669" />
+              {/* <Sprout size={24} color="#059669" /> */}
               <Text className="text-xl font-bold text-gray-800 ml-2">Recommended Plants</Text>
             </View>
             <TouchableOpacity>

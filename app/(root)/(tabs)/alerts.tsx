@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScrollView, View, Text, Image, Pressable, Alert as RNAlert } from 'react-native';
-import { AlertCircle, Bug, CheckCircle, Info, XCircle, Bell } from 'lucide-react-native';
+// import { AlertCircle, Bug, CheckCircle, Info, XCircle, Bell } from 'lucide-react-native';
 import { useUser } from '@clerk/clerk-expo';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -76,17 +76,17 @@ const AlertsComponent = () => {
         }
     };
 
-    const getAlertIcon = (alertType: string) => {
-        switch (alertType) {
-            case 'Critical': // Example type based on title or another property
-                return <AlertCircle className="h-6 w-6 text-red-500" />;
-            case 'Warning':
-                return <Bug className="h-6 w-6 text-yellow-500" />;
-            case 'Info':
-            default:
-                return <Info className="h-6 w-6 text-blue-500" />;
-        }
-    };
+    // const getAlertIcon = (alertType: string) => {
+    //     switch (alertType) {
+    //         case 'Critical': // Example type based on title or another property
+    //             return <AlertCircle className="h-6 w-6 text-red-500" />;
+    //         case 'Warning':
+    //             return <Bug className="h-6 w-6 text-yellow-500" />;
+    //         case 'Info':
+    //         default:
+    //             return <Info className="h-6 w-6 text-blue-500" />;
+    //     }
+    // };
 
     return (
         <SafeAreaView className="flex-1 bg-white">
@@ -97,7 +97,7 @@ const AlertsComponent = () => {
 
                 {alerts.length === 0 ? (
                     <View className="bg-white rounded-xl p-8 items-center justify-center shadow-md border border-gray-200 mt-8">
-                        <CheckCircle className="h-12 w-12 text-green-400 mb-4" />
+                        {/* <CheckCircle className="h-12 w-12 text-green-400 mb-4" /> */}
                         <Text className="text-gray-600 text-lg font-medium text-center">All clear! No new alerts.</Text>
                         <Text className="text-gray-400 text-sm text-center mt-2">Your garden is thriving.</Text>
                     </View>

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react"
 import { View, Text, Modal, TouchableOpacity, ScrollView, Animated, TextInput } from "react-native"
 import { crops, indianStates, regionalFertilizers, fertilizers } from "@/assets/data/plant"
-import { ChevronDown, Minus, Plus, Leaf, AlertTriangle, Droplet, MapPin } from "lucide-react-native"
+// import { ChevronDown, Minus, Plus, Leaf, AlertTriangle, Droplet, MapPin } from "lucide-react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { Crop, Fertilizer, IndianState, RegionalFertilizer } from "@/types/plant"
 import { Image } from "react-native"
@@ -321,9 +321,9 @@ const FertilizerCalculator = () => {
                   }}
                   className="flex-row items-center p-3 bg-gray-50 rounded-lg mb-2"
                 >
-                  <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-3">
+                  {/* <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-3">
                     <MapPin size={20} color="#3b82f6" />
-                  </View>
+                  </View> */}
                   <Text className="text-gray-800 font-medium">{state.name}</Text>
                 </TouchableOpacity>
               ))}
@@ -350,9 +350,9 @@ const FertilizerCalculator = () => {
       }}
       className="flex-row items-center p-3 bg-gray-50 rounded-lg mb-2"
     >
-      <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mr-3">
+      {/* <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mr-3">
         <Leaf size={20} color="#16a34a" />
-      </View>
+      </View> */}
       <View>
         <Text className="text-gray-800 font-medium">{plant.name}</Text>
         <Text className="text-gray-500 text-sm">
@@ -383,12 +383,12 @@ const FertilizerCalculator = () => {
               className="flex-row items-center justify-between bg-gray-50 rounded-lg p-4"
             >
               <View className="flex-row items-center">
-                <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mr-3">
+                {/* <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mr-3">
                   <Leaf size={20} color="#16a34a" />
-                </View>
+                </View> */}
                 <Text className="text-gray-800 font-medium">{selectedCrop.name}</Text>
               </View>
-              <ChevronDown size={24} color="#4B5563" />
+              {/* <ChevronDown size={24} color="#4B5563" /> */}
             </TouchableOpacity>
           </View>
 
@@ -400,12 +400,12 @@ const FertilizerCalculator = () => {
               className="flex-row items-center justify-between bg-gray-50 rounded-lg p-4"
             >
               <View className="flex-row items-center">
-                <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-3">
+                {/* <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-3">
                   <MapPin size={20} color="#3b82f6" />
-                </View>
+                </View> */}
                 <Text className="text-gray-800 font-medium">{selectedState.name}</Text>
               </View>
-              <ChevronDown size={24} color="#4B5563" />
+              {/* <ChevronDown size={24} color="#4B5563" /> */}
             </TouchableOpacity>
           </View>
 
@@ -434,7 +434,7 @@ const FertilizerCalculator = () => {
             </View>
             <View className="bg-yellow-50 rounded-lg p-3">
               <View className="flex-row items-center">
-                <AlertTriangle size={16} color="#d97706" className="mr-2" />
+                {/* <AlertTriangle size={16} color="#d97706" className="mr-2" /> */}
                 <Text className="text-yellow-800 text-sm">
                   {soilPH < 6 
                     ? "Acidic soil may require lime application alongside fertilizers."
@@ -498,7 +498,7 @@ const FertilizerCalculator = () => {
                   onPress={() => setPlotSize(Math.max(0.1, plotSize - (unit === "Guntha" ? 0.1 : 0.5)))}
                   className="bg-gray-200 rounded-full p-2"
                 >
-                  <Minus size={20} color="#4B5563" />
+                  {/* <Minus size={20} color="#4B5563" /> */}
                 </TouchableOpacity>
                 <TextInput
                   value={plotSize.toString()}
@@ -515,7 +515,7 @@ const FertilizerCalculator = () => {
                   onPress={() => setPlotSize(plotSize + (unit === "Guntha" ? 0.1 : 0.5))}
                   className="bg-gray-200 rounded-full p-2"
                 >
-                  <Plus size={20} color="#4B5563" />
+                  {/* <Plus size={20} color="#4B5563" /> */}
                 </TouchableOpacity>
               </View>
             </View>
@@ -545,9 +545,9 @@ const FertilizerCalculator = () => {
                 <View key={fertilizer} className="p-3 border-b border-gray-100">
                   <View className="flex-row justify-between items-center">
                     <View className="flex-row items-center flex-1">
-                      <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mr-3">
+                      {/* <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mr-3">
                         <Leaf size={20} color="#16a34a" />
-                      </View>
+                      </View> */}
                       <View>
                         <Text className="text-gray-800 font-medium">{fertilizer}</Text>
                         <Text className="text-gray-500">{details.quantity}</Text>

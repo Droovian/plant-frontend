@@ -21,7 +21,7 @@ export type Crop = {
         K: number;
     };
     imageUrl?: string;
-    description: string;
+    description?: string;
 }
 
 export type Fertilizer = {

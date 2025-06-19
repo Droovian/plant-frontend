@@ -3,21 +3,21 @@ import React, { useEffect, useState } from "react"
 import { useLocalSearchParams, useRouter } from "expo-router"
 import { SafeAreaView } from "react-native-safe-area-context"
 import Carousel from "react-native-reanimated-carousel"
-import {
-  ArrowLeft,
-  Thermometer,
-  Sun,
-  Droplets,
-  FlaskConical,
-  Timer,
-  Calendar,
-  Ruler,
-  TreeDeciduous,
-  Bug,
-  Sprout,
-  Scale,
-  Leaf,
-} from "lucide-react-native"
+// import {
+//   ArrowLeft,
+//   Thermometer,
+//   Sun,
+//   Droplets,
+//   FlaskConical,
+//   Timer,
+//   Calendar,
+//   Ruler,
+//   TreeDeciduous,
+//   Bug,
+//   Sprout,
+//   Scale,
+//   Leaf,
+// } from "lucide-react-native"
 import { useAuth } from "@clerk/clerk-expo"
 
 interface Temperature {
@@ -123,7 +123,7 @@ const PlantIndividual = () => {
       <ScrollView className="flex-1">
         {/* Header with back button */}
         <TouchableOpacity onPress={() => router.back()} className="flex-row items-center p-4 absolute z-10">
-          <ArrowLeft size={24} color="#1F2937" />
+          {/* <ArrowLeft size={24} color="#1F2937" /> */}
           <Text className="ml-2 text-gray-800 font-medium">Back</Text>
         </TouchableOpacity>
 
@@ -146,7 +146,7 @@ const PlantIndividual = () => {
             <Text className="text-3xl font-bold text-gray-800">{plant.common_name}</Text>
             <Text className="text-lg text-gray-600 italic mb-2">{plant.scientific_name}</Text>
             <View className="flex-row items-center mb-4">
-              <Leaf size={20} color="#059669" />
+              {/* <Leaf size={20} color="#059669" /> */}
               <Text className="ml-2 text-green-700">{plant.category}</Text>
             </View>
 
@@ -162,7 +162,7 @@ const PlantIndividual = () => {
               <View className="grid grid-cols-2 gap-4">
                 <View className="bg-green-50 p-4 rounded-lg">
                   <View className="flex-row items-center mb-2">
-                    <Thermometer size={20} color="#059669" />
+                    {/* <Thermometer size={20} color="#059669" /> */}
                     <Text className="ml-2 font-medium text-gray-700">Temperature</Text>
                   </View>
                   <Text className="text-gray-600">
@@ -172,7 +172,7 @@ const PlantIndividual = () => {
 
                 <View className="bg-green-50 p-4 rounded-lg">
                   <View className="flex-row items-center mb-2">
-                    <Sun size={20} color="#059669" />
+                    {/* <Sun size={20} color="#059669" /> */}
                     <Text className="ml-2 font-medium text-gray-700">Sunlight</Text>
                   </View>
                   <Text className="text-gray-600">{plant.ideal_conditions.sunlight}</Text>
@@ -180,7 +180,7 @@ const PlantIndividual = () => {
 
                 <View className="bg-green-50 p-4 rounded-lg">
                   <View className="flex-row items-center mb-2">
-                    <Droplets size={20} color="#059669" />
+                    {/* <Droplets size={20} color="#059669" /> */}
                     <Text className="ml-2 font-medium text-gray-700">Watering</Text>
                   </View>
                   <Text className="text-gray-600">{plant.ideal_conditions.watering_frequency}</Text>
@@ -188,7 +188,7 @@ const PlantIndividual = () => {
 
                 <View className="bg-green-50 p-4 rounded-lg">
                   <View className="flex-row items-center mb-2">
-                    <FlaskConical size={20} color="#059669" />
+                    {/* <FlaskConical size={20} color="#059669" /> */}
                     <Text className="ml-2 font-medium text-gray-700">Soil pH</Text>
                   </View>
                   <Text className="text-gray-600">
@@ -203,21 +203,21 @@ const PlantIndividual = () => {
               <Text className="text-xl font-semibold text-gray-800 mb-4">Growth Information</Text>
               <View className="space-y-4">
                 <View className="flex-row items-center">
-                  <Timer size={20} color="#059669" />
+                  {/* <Timer size={20} color="#059669" /> */}
                   <Text className="ml-2 text-gray-700">Time to Harvest: {plant.growth_info.time_to_harvest}</Text>
                 </View>
                 <View className="flex-row items-center">
-                  <Calendar size={20} color="#059669" />
+                  {/* <Calendar size={20} color="#059669" /> */}
                   <Text className="ml-2 text-gray-700">
                     Sowing Season: {plant.growth_info.sowing_season.join(", ")}
                   </Text>
                 </View>
                 <View className="flex-row items-center">
-                  <Ruler size={20} color="#059669" />
+                  {/* <Ruler size={20} color="#059669" /> */}
                   <Text className="ml-2 text-gray-700">Spacing: {plant.growth_info.spacing}</Text>
                 </View>
                 <View className="flex-row items-center">
-                  <TreeDeciduous size={20} color="#059669" />
+                  {/* <TreeDeciduous size={20} color="#059669" /> */}
                   <Text className="ml-2 text-gray-700">Height: {plant.growth_info.plant_height}</Text>
                 </View>
               </View>
@@ -228,7 +228,7 @@ const PlantIndividual = () => {
               <Text className="text-xl font-semibold text-gray-800 mb-4">Maintenance</Text>
               <View className="bg-green-50 rounded-lg p-4 mb-4">
                 <View className="flex-row items-center mb-2">
-                  <Sprout size={20} color="#059669" />
+                  {/* <Sprout size={20} color="#059669" /> */}
                   <Text className="ml-2 font-medium text-gray-700">Pruning</Text>
                 </View>
                 <Text className="text-gray-600">{plant.maintenance.pruning}</Text>
@@ -238,7 +238,7 @@ const PlantIndividual = () => {
               {plant.maintenance.pest_control.map((pest, index) => (
                 <View key={index} className="bg-green-50 rounded-lg p-4 mb-2">
                   <View className="flex-row items-center mb-2">
-                    <Bug size={20} color="#059669" />
+                    {/* <Bug size={20} color="#059669" /> */}
                     <Text className="ml-2 font-medium text-gray-700">{pest.pest}</Text>
                   </View>
                   <Text className="text-gray-600">Solution: {pest.solution}</Text>
@@ -251,7 +251,7 @@ const PlantIndividual = () => {
               <Text className="text-xl font-semibold text-gray-800 mb-4">Yield</Text>
               <View className="space-y-4">
                 <View className="flex-row items-center">
-                  <Scale size={20} color="#059669" />
+                  {/* <Scale size={20} color="#059669" /> */}
                   <Text className="ml-2 text-gray-700">Per Plant: {plant.yield.per_plant}</Text>
                 </View>
                 <Text className="text-gray-600">Optimal Yield: {plant.yield.optimal_yield}</Text>

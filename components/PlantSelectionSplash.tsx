@@ -1,7 +1,6 @@
 import React, { useState } from "react"
 import { View, Text, Image, TouchableOpacity, FlatList, Modal, SafeAreaView } from "react-native"
 import { StatusBar } from "expo-status-bar"
-import { X, Check, AlertCircle } from "lucide-react-native"
 import { Crop } from "@/types/plant"
 import { BlurView } from "expo-blur"
 
@@ -60,7 +59,7 @@ export default function PlantSelectionScreen({ onComplete }: { onComplete: (plan
                 className="absolute inset-0 items-center justify-center"
               >
                 <View className="bg-green-600 rounded-full p-2">
-                  <Check color="white" size={20} />
+                  {/* <Check color="white" size={20} /> */}
                 </View>
               </BlurView>
             )}
@@ -95,7 +94,7 @@ export default function PlantSelectionScreen({ onComplete }: { onComplete: (plan
               onPress={() => setModalVisible(false)}
               className="h-10 w-10 items-center justify-center rounded-full bg-gray-100"
             >
-              <X color="#374151" size={20} />
+              {/* <X color="#374151" size={20} /> */}
             </TouchableOpacity>
           </View>
 
@@ -113,7 +112,7 @@ export default function PlantSelectionScreen({ onComplete }: { onComplete: (plan
             </View>
             {selectedPlants.length === 0 && (
               <View className="flex-row items-center">
-                <AlertCircle size={16} color="#6B7280" className="mr-1" />
+                {/* <AlertCircle size={16} color="#6B7280" className="mr-1" /> */}
                 <Text className="text-gray-500 text-sm">Select at least 5 plants</Text>
               </View>
             )}

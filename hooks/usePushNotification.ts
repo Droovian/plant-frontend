@@ -13,12 +13,15 @@ export interface PushNotificationState {
 
 export const usePushNotifications = (): PushNotificationState => {
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldPlaySound: false,
-      shouldShowAlert: true,
-      shouldSetBadge: false,
-    }),
-  });
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
 
   const [expoPushToken, setExpoPushToken] = useState<
     Notifications.ExpoPushToken | undefined
