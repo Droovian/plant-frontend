@@ -5,6 +5,7 @@ import {
   Alert,
   Dimensions,
   ScrollView,
+  FlatList,
   Image,
   TouchableOpacity,
   Animated,
@@ -410,7 +411,7 @@ const LayoutDetail = () => {
       Alert.alert('Error', 'Failed to log watering.');
     }
   }, [id, fetchWateringHistory]); // Depends on id and fetchWateringHistory
-  
+
   const logWatering = useCallback((plantName: string) => {
     if (waterLevels[plantName]) {
       Animated.sequence([
@@ -536,83 +537,25 @@ const LayoutDetail = () => {
   }, [MemoizedColorMap]); // Depends on the memoized color map
 
   const renderPlantCards = useCallback(() => {
-    if (!layout) return null;
-    const plantList: { [key: string]: boolean } = {};
-    layout.grid.rows.forEach((row) => {
-      row.forEach((cell) => {
-        if (cell.plantName) plantList[cell.plantName] = true;
-      });
-    });
+  if (!layout) return null;
+  const plantListArray: Plant[] = []; // Changed to store plant objects
+  const seenPlantNames: { [key: string]: boolean } = {};
 
-    return Object.keys(plantList).map((plantName, index) => {
-      const plant = plants.find((v) => v.name === plantName);
-      if (!plant) return null;
-      const history = wateringHistory.find((h) => h.plantName === plantName);
-      const plantingDate = history?.wateringDates[0];
-      const daysSincePlanted = plantingDate
-        ? Math.floor((Date.now() - new Date(plantingDate).getTime()) / (1000 * 60 * 60 * 24))
-        : 0;
-      const growthStage = getGrowthStage(plantName, daysSincePlanted);
-      const harvestDate = plantingDate
-        ? new Date(new Date(plantingDate).setDate(new Date(plantingDate).getDate() + (plant.daysToHarvest || 60)))
-        : null;
-
-      return (
-        <MotiView
-          key={plantName}
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'spring', delay: 100 * (index + 6) }}
-          className="bg-white p-4 rounded-2xl shadow-md mb-4"
-        >
-          <View className="flex-row items-center mb-3">
-            <Image source={plant.image} className="w-16 h-16 rounded-full mr-3" resizeMode="contain" />
-            <View className="flex-1">
-              <Text className="text-lg font-bold text-green-800">{plant.name}</Text>
-              <Text className="text-sm text-gray-500">
-                Stage: {growthStage} {growthStage === 'Seedling' ? '🌱' : growthStage === 'Flowering' ? '🌸' : '🍅'}
-              </Text>
-            </View>
-          </View>
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-sm text-gray-600">
-              Water every {getWateringInterval(plant.name)} days
-            </Text>
-            {harvestDate && (
-              <Text className="text-sm text-gray-600">
-                Harvest: {harvestDate.toLocaleDateString()}
-              </Text>
-            )}
-          </View>
-          <View className="bg-gray-100 rounded-full h-3 overflow-hidden mb-3">
-            <Animated.View
-              className="bg-blue-400 h-3 rounded-full"
-              style={{
-                width: waterLevels[plantName]?.interpolate({
-                  inputRange: [0, 100],
-                  outputRange: ['0%', '100%'],
-                }),
-              }}
-            />
-          </View>
-          <View className="flex-row justify-between">
-            <CustomButton
-              title="Log Watering"
-              bgVariant="plant"
-              onPress={() => logWatering(plantName)}
-              className="flex-1 mr-2 py-2 rounded-lg"
-            />
-            <CustomButton
-              title="Log Harvest"
-              bgVariant="secondary"
-              onPress={() => logHarvest(plantName)}
-              className="flex-1 ml-2 py-2 rounded-lg"
-            />
-          </View>
-        </MotiView>
-      );
+  layout.grid.rows.forEach((row) => {
+    row.forEach((cell) => {
+      if (cell.plantName && !seenPlantNames[cell.plantName]) {
+        const plant = plants.find((v) => v.name === cell.plantName);
+        if (plant) {
+          plantListArray.push(plant);
+          seenPlantNames[cell.plantName] = true;
+        }
+      }
     });
-  }, [layout, waterLevels, wateringHistory, getGrowthStage, getWateringInterval, logWatering, logHarvest]); // Dependencies for plant cards
+  });
+
+  // Instead of returning the JSX directly, return the array of plant objects
+  return plantListArray;
+}, [layout]); // Dependencies remain the same as the data source hasn't changed.
 
   return (
     <LinearGradient colors={['#D1FAE5', '#F0FFF4']} className="flex-1" style={{ paddingTop: insets.top }}>
@@ -626,10 +569,10 @@ const LayoutDetail = () => {
             transition={{ type: 'spring', delay: 100 }}
             className="my-4"
           >
-            <Text className="text-center text-3xl font-bold text-green-800">
+            <Text className="mx-auto text-3xl font-bold text-green-800">
               {layout?.name || 'My Garden Layout'}
             </Text>
-            <Text className="text-sm text-gray-500 mt-1">
+            <Text className="mx-auto text-sm text-gray-500 font-bold mt-2">
               Created: {layout?.createdAt ? new Date(layout.createdAt).toLocaleDateString() : 'N/A'}
             </Text>
           </MotiView>
@@ -757,8 +700,84 @@ const LayoutDetail = () => {
             className="mt-6"
           >
             <Text className="text-xl font-bold text-green-800 mb-3">My Plants</Text>
-            {renderPlantCards()}
-          </MotiView>
+            {/* --- START CHANGES HERE --- */}
+            <FlatList
+              data={renderPlantCards()} // Pass the array of plant objects
+              horizontal // Enable horizontal scrolling
+              showsHorizontalScrollIndicator={false} // Hide the scroll indicator
+              keyExtractor={(item) => item.name} // Unique key for each plant card
+              contentContainerStyle={{ paddingRight: 16 }} // Add some padding to the end
+              renderItem={({ item: plant, index }) => { // item is now a plant object
+                const history = wateringHistory.find((h) => h.plantName === plant.name);
+                const plantingDate = history?.wateringDates[0];
+                const daysSincePlanted = plantingDate
+                  ? Math.floor((Date.now() - new Date(plantingDate).getTime()) / (1000 * 60 * 60 * 24))
+                  : 0;
+                const growthStage = getGrowthStage(plant.name, daysSincePlanted);
+                const harvestDate = plantingDate
+                  ? new Date(new Date(plantingDate).setDate(new Date(plantingDate).getDate() + (plant.daysToHarvest || 60)))
+                  : null;
+
+                return (
+                  <MotiView
+                    key={plant.name} // Use plant.name for key here, as FlatList needs it
+                    from={{ opacity: 0, translateY: 20 }}
+                    animate={{ opacity: 1, translateY: 0 }}
+                    transition={{ type: 'spring', delay: 100 * (index + 6) }}
+                    className="bg-white p-4 rounded-2xl mb-4"
+                    // Add width for each card so they don't take up full screen
+                    style={{ width: Dimensions.get('window').width * 0.8, marginRight: 16 }} // Adjust width and margin as needed
+                  >
+                    <View className="flex-row items-center mb-3">
+                      <Image source={plant.image} className="w-16 h-16 rounded-full mr-3" resizeMode="contain" />
+                      <View className="flex-1">
+                        <Text className="text-lg font-bold text-green-800">{plant.name}</Text>
+                        <Text className="text-sm text-gray-500">
+                          Stage: {growthStage} {growthStage === 'Seedling' ? '🌱' : growthStage === 'Flowering' ? '🌸' : '🍅'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View className="flex-row justify-between mb-2">
+                      <Text className="text-sm text-gray-600">
+                        Water every {getWateringInterval(plant.name)} days
+                      </Text>
+                      {harvestDate && (
+                        <Text className="text-sm text-gray-600">
+                          Harvest: {harvestDate.toLocaleDateString()}
+                        </Text>
+                      )}
+                    </View>
+                    <View className="bg-gray-100 rounded-full h-3 overflow-hidden mb-3">
+                      <Animated.View
+                        className="bg-blue-400 h-3 rounded-full"
+                        style={{
+                          width: waterLevels[plant.name]?.interpolate({
+                            inputRange: [0, 100],
+                            outputRange: ['0%', '100%'],
+                          }),
+                        }}
+                      />
+                    </View>
+                    <View className="flex-row justify-between">
+                      <CustomButton
+                        title="Log Watering"
+                        bgVariant="plant"
+                        onPress={() => logWatering(plant.name)}
+                        className="flex-1 mr-2 py-2 rounded-lg"
+                      />
+                      <CustomButton
+                        title="Log Harvest"
+                        bgVariant="secondary"
+                        onPress={() => logHarvest(plant.name)}
+                        className="flex-1 ml-2 py-2 rounded-lg"
+                      />
+                    </View>
+                  </MotiView>
+                    );
+                  }}
+                />
+                {/* --- END CHANGES HERE --- */}
+              </MotiView>
 
           <CustomButton
             title="Export Garden Report"
