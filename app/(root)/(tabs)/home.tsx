@@ -9,13 +9,18 @@ import AsyncStorage from "@react-native-async-storage/async-storage"
 import PlantSelectionScreen from "@/components/PlantSelectionSplash"
 import LayoutImage from "@/assets/images/layout.png"
 import { Crop } from "@/types/plant"
+import useLocationStore from "@/store"
 
 const HomePage = () => {
   const { user } = useUser()
+  const { getLocation, getAddress, address, getWeather } = useLocationStore()
+
+  const weatherApiKey = process.env.EXPO_PUBLIC_WEATHER_API_KEY!
   const { signOut } = useAuth()
   const [showPlantModal, setShowPlantModal] = useState<boolean>(false)
   const [fadeAnim] = useState(new Animated.Value(0))
-  
+  const [loadingWeather, setLoadingWeather] = useState<boolean>(true);
+
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -31,6 +36,23 @@ const HomePage = () => {
     }
     checkPlantSelection()
   }, [])
+
+  useEffect(() => {
+  (async () => {
+    try {
+      setLoadingWeather(true);
+      await getLocation();
+      await getAddress();
+      if (address?.city) {
+        await getWeather(address.city, weatherApiKey);
+      }
+    } catch (error) {
+      console.error('Error initializing location/address/weather:', error);
+    } finally {
+      setLoadingWeather(false);
+    }
+  })();
+}, [address?.city, getLocation, getAddress, getWeather]);
 
   const handlePlantSelectionComplete = async (selectedPlants: Crop[]) => {
     await AsyncStorage.setItem("selectedPlants", JSON.stringify(selectedPlants))
@@ -170,18 +192,8 @@ const quickActions = [
     onPress: () => { router.push("/my-layouts") },
   },
   {
-    icon: "sunny-outline",
-    title: "Light Meter",
-    onPress: () => {},
-  },
-  {
     icon: "calendar-outline",
     title: "Plant Calendar",
-    onPress: () => {},
-  },
-  {
-    icon: "leaf-outline",
-    title: "My Plants",
     onPress: () => {},
   },
 ]

@@ -44,6 +44,7 @@ import Radish from "@/assets/images/radish.png";
 import Pumpkin from "@/assets/images/pumpkin.png";
 import Breadfruit from "@/assets/images/breadfruit.png";
 import Drumstick from "@/assets/images/drumstick.png";
+import Amaranth from "@/assets/images/redamaranthus.png";
 
 export const images = {
     onboarding1: plant1,
@@ -73,6 +74,7 @@ export const plantImages = {
   Pumpkin: Pumpkin,
   Breadfruit: Breadfruit,
   Drumstick: Drumstick,
+  Amaranth: Amaranth,
 }
 
 export const icons = {

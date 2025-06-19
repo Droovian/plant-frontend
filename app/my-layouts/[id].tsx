@@ -8,7 +8,7 @@ import { useUser } from '@clerk/clerk-expo';
 import axios from 'axios';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { vegetables } from '@/assets/data/plant';
+import { plants } from '@/assets/data/plant';
 import { MotiView } from 'moti';
 import { Calendar } from 'react-native-calendars';
 import useWeather from '@/hooks/useWeather';
@@ -254,7 +254,7 @@ const LayoutDetail = () => {
     // Generate insights for plants needing water
     if (plantsNeedingWater.length > 0) {
       plantsNeedingWater.forEach(plantName => {
-        const plant = vegetables.find((v) => v.name === plantName);
+        const plant = plants.find((v) => v.name === plantName);
         if (!plant) return;
         
         if (todayForecast && todayForecast.maxTemp > 32) {
@@ -335,7 +335,7 @@ const LayoutDetail = () => {
           <View key={colIndex} className="border border-gray-300 bg-white justify-center items-center" style={{ width: cellSize, height: cellSize }}>
             {cell.plantName && (
               <Image
-                source={vegetables.find((v) => v.name === cell.plantName)?.image}
+                source={plants.find((v) => v.name === cell.plantName)?.image}
                 className="w-4/5 h-4/5"
                 resizeMode="contain"
               />
@@ -396,7 +396,7 @@ const LayoutDetail = () => {
     });
 
     return Object.keys(plantList).map((plantName) => {
-      const plant = vegetables.find((v) => v.name === plantName);
+      const plant = plants.find((v) => v.name === plantName);
       if (!plant) return null;
 
       return (

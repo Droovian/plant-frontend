@@ -178,211 +178,384 @@ const indianStates: IndianState[] = [
   }, // (Standard Indian recommendation; direct source not found)
 ]
   
-  const vegetables = [
-    {
-        name: "Okra",
-        image: plantImages.okra,
-        color: "#A8E6CE",
-        noOfSquares: 1,
-        noCount: 1, // Okra typically requires more space, so it's usually 1 plant per square foot.
-        spacingFeet: 3, // Traditional spacing is about 3 feet apart.
-        soilPH: [5.8, 7.0],
-        sunlight: "Full Sun",
-        soilType: ["Loamy", "Sandy"],
-        nutrientLevel: "Moderate",
-    },
-    {
-        name: "Tomato",
-        image: plantImages.tomato,
-        color: "#FFB3B3",
-        noOfSquares: 1,
-        noCount: 1, // Indeterminate tomatoes need about 1 square foot each.
-        spacingFeet: 2, // Traditional spacing is about 2 feet apart.
-        soilPH: [6.0, 6.8],
-        sunlight: "Full Sun",
-        soilType: ["Loamy", "Sandy"],
-        nutrientLevel: "High",
-    },
-    {
-        name: "Chilli",
-        image: plantImages.chilli,
-        color: "#FFDBA4",
-        noOfSquares: 1,
-        noCount: 4, // Chilli peppers can be planted closer together.
-        spacingFeet: 1, // Traditional spacing is about 1 foot apart.
-        soilPH: [5.5, 7.0],
-        sunlight: "Full Sun",
-        soilType: ["Loamy", "Sandy"],
-        nutrientLevel: "Moderate",
-    },
-    {
-        name: "Drumstick",
-        image: plantImages.Drumstick,
-        color: "#8BC34A",
-        noOfSquares: 1,
-        noCount: 1, // Typically one plant per square foot.
-        spacingFeet: 6, // Traditional spacing is about 6 feet apart.
-        soilPH: [6.0, 7.0],
-        sunlight: "Full Sun",
-        soilType: ["Well-drained"],
-        nutrientLevel: "Moderate",
-    },
-    {
-        name: "Pumpkin",
-        image: plantImages.Pumpkin,
-        color: "#FFC107",
-        noOfSquares: 4, // Requires more space due to spreading vines.
-        noCount: 1, // Typically one plant per planting area.
-        spacingFeet: 5, // Traditional spacing is about 5 feet apart.
-        soilPH: [6.0, 6.8],
-        sunlight: "Full Sun",
-        soilType: ["Well-drained"],
-        nutrientLevel: "High",
-    },
-    {
-        name: "Breadfruit",
-        image: plantImages.Breadfruit,
-        color: "#F7DC6F",
-        noOfSquares: 4, // Requires more space due to tree size.
-        noCount: 1, // Typically one tree per planting area.
-        spacingFeet: 20, // Traditional spacing is about 20 feet apart.
-        soilPH: [5.5, 7.0],
-        sunlight: "Full Sun",
-        soilType: ["Well-drained"],
-        nutrientLevel: "Moderate",
-    },
-    {
-        name: "Radish",
-        image: plantImages.Radish,
-        color: "#FF69B4",
-        noOfSquares: 1,
-        noCount: 16, // Can be densely planted.
-        spacingFeet: 0.5, // Traditional spacing is about 0.5 feet apart.
-        soilPH: [6.0, 7.0],
-        sunlight: "Full Sun to Partial Shade",
-        soilType: ["Well-drained"],
-        nutrientLevel: "Moderate",
-    },
-    {
-        name: "Eggplant",
-        image: plantImages.Eggplant,
-        color: "#D4B8E2",
-        noOfSquares: 1,
-        noCount: 1, // Eggplant typically requires about 1 square foot per plant.
-        spacingFeet: 2, // Traditional spacing is about 2 feet apart.
-        soilPH: [5.5, 6.5],
-        sunlight: "Full Sun",
-        soilType: ["Loamy", "Sandy"],
-        nutrientLevel: "Moderate",
-    },
-    {
-        name: "Potato",
-        image: plantImages.Potato,
-        color: "#F0D9FF",
-        noOfSquares: 1,
-        noCount: 4, // Potatoes can be planted with multiple seed potatoes per square foot.
-        spacingFeet: 1, // Traditional spacing is about 1 foot apart.
-        soilPH: [4.8, 6.5],
-        sunlight: "Full Sun",
-        soilType: ["Loamy", "Sandy"],
-        nutrientLevel: "High",
-    },
-    {
-        name: "Asparagus",
-        image: plantImages.Asparagus,
-        color: "#C4E17F",
-        noOfSquares: 2, // Asparagus requires more space due to its spread.
-        noCount: 1, // Typically one crown per planting area.
-        spacingFeet: 1.5, // Traditional spacing is about 1.5 feet apart.
-        soilPH: [6.5, 7.5],
-        sunlight: "Full Sun",
-        soilType: ["Loamy", "Sandy"],
-        nutrientLevel: "High",
-    },
-    {
-        name: "Beet",
-        image: plantImages.Beet,
-        color: "#E57373",
-        noOfSquares: 1,
-        noCount: 16, // Beets can be densely planted.
-        spacingFeet: 0.5, // Traditional spacing is about 0.5 feet apart.
-        soilPH: [6.0, 7.5],
-        sunlight: "Full Sun",
-        soilType: ["Loamy", "Sandy"],
-        nutrientLevel: "Moderate",
-    },
-    {
-        name: "Spinach",
-        image: plantImages.Spinach,
-        color: "#AED581",
-        noOfSquares: 1,
-        noCount: 9, // Spinach can be densely planted.
-        spacingFeet: 0.5, // Traditional spacing is about 0.5 feet apart.
-        soilPH: [6.0, 7.5],
-        sunlight: "Full Sun to Partial Shade",
-        soilType: ["Loamy", "Sandy"],
-        nutrientLevel: "Moderate",
-    },
-    {
-        name: "Corn",
-        image: plantImages.Corn,
-        color: "#FFF176",
-        noOfSquares: 1,
-        noCount: 1, // Corn typically requires about 1 square foot per plant.
-        spacingFeet: 1, // Traditional spacing is about 1 foot apart in blocks.
-        soilPH: [5.8, 7.0],
-        sunlight: "Full Sun",
-        soilType: ["Loamy", "Sandy"],
-        nutrientLevel: "High",
-    },
-    {
-        name: "Cucumber",
-        image: plantImages.Cucumber,
-        color: "#81C784",
-        noOfSquares: 1,
-        noCount: 2, // Cucumbers can be planted with two per square foot if trellised.
-        spacingFeet: 1, // Traditional spacing is about 1 foot apart.
-        soilPH: [5.5, 7.0],
-        sunlight: "Full Sun",
-        soilType: ["Loamy", "Sandy"],
-        nutrientLevel: "High",
-    },
-    {
-        name: "Onion",
-        image: plantImages.Onion,
-        color: "#FFD54F",
-        noOfSquares: 1,
-        noCount: 9, // Onions can be densely planted.
-        spacingFeet: 0.5, // Traditional spacing is about 0.5 feet apart.
-        soilPH: [6.0, 7.0],
-        sunlight: "Full Sun",
-        soilType: ["Loamy", "Sandy"],
-        nutrientLevel: "Moderate",
-    },
-    {
-        name: "Cowpea",
-        image: plantImages.Cowpea,
-        color: "#A1887F",
-        noOfSquares: 1,
-        noCount: 9, // Cowpeas can be densely planted.
-        spacingFeet: 0.5, // Traditional spacing is about 0.5 feet apart.
-        soilPH: [5.5, 6.5],
-        sunlight: "Full Sun",
-        soilType: ["Loamy", "Sandy"],
-        nutrientLevel: "Low",
-    },
-    {
-        name: "Lettuce",
-        image: plantImages.Lettuce,
-        color: "#C5E1A5",
-        noOfSquares: 1, // Lettuce typically requires about 1 square foot.
-        noCount: 4, // Lettuce can be densely planted.
-        spacingFeet: 0.5, // Traditional spacing is about 0.5 feet apart.
-        soilPH: [6.0, 6.8],
-        sunlight: "Full Sun to Partial Shade",
-        soilType: ["Loamy", "Sandy"],
-        nutrientLevel: "Moderate",
-    },
+  const plants = [
+  {
+    name: 'Brinjal',
+    image: plantImages.Eggplant, // Add image reference if available
+    color: '#D4B8E2', // Borrowed from Eggplant in vegetables
+    noCount: 1,
+    spacingFeet: 1.5,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 3, // Matches plants
+    planting_months: ['December', 'January', 'May', 'June'],
+    optimal_soil_type: ['Loamy'],
+    optimal_ph_range: [6.0, 7.0],
+  },
+  {
+    name: 'Okra',
+    image: plantImages.okra,
+    color: '#A8E6CE',
+    noCount: 1,
+    spacingFeet: 1.5, // Matches plants
+    sunlight: 'Full Sun',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 3,
+    planting_months: ['June', 'July', 'August', 'February'],
+    optimal_soil_type: ['Sandy Loam'],
+    optimal_ph_range: [6.0, 6.8],
+  },
+  {
+    name: 'Tomato',
+    image: plantImages.tomato,
+    color: '#FFB3B3',
+    noCount: 1,
+    spacingFeet: 2.5, // Average of 2 (vegetables) and 3 (plants)
+    sunlight: 'Full Sun',
+    nutrientLevel: 'High',
+    waterRequirement: 4,
+    planting_months: ['May', 'June', 'November', 'December'],
+    optimal_soil_type: ['Loamy', 'Clay Loam'],
+    optimal_ph_range: [6.0, 6.8],
+  },
+  {
+    name: 'Onion',
+    image: plantImages.Onion,
+    color: '#FFD54F',
+    noCount: 9,
+    spacingFeet: 0.5, // Matches vegetables
+    sunlight: 'Full Sun',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 2,
+    planting_months: ['October', 'November'],
+    optimal_soil_type: ['Sandy Loam', 'Clay Loam'],
+    optimal_ph_range: [6.0, 7.0],
+  },
+  {
+    name: 'Red Amaranth',
+    image: null,
+    color: '#C5E1A5', // Borrowed from Lettuce for similar leafy greens
+    noCount: 4,
+    spacingFeet: 0.82,
+    sunlight: 'Full Sun to Partial Shade',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 4,
+    planting_months: ['February', 'March', 'April', 'May', 'June', 'July', 'August', 'September'],
+    optimal_soil_type: ['Sandy Loam'],
+    optimal_ph_range: [6.0, 7.0],
+  },
+  {
+    name: 'Cucumber',
+    image: plantImages.Cucumber,
+    color: '#81C784',
+    noCount: 2, // Matches vegetables (trellised)
+    spacingFeet: 1,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'High',
+    waterRequirement: 4,
+    planting_months: ['June', 'January', 'February', 'March', 'April'],
+    optimal_soil_type: ['Sandy Loam'],
+    optimal_ph_range: [6.0, 7.0],
+  },
+  {
+    name: 'Colocasia',
+    image: null,
+    color: '#C4E17F', // Borrowed from Asparagus for similar structure
+    noCount: 1,
+    spacingFeet: 6,
+    sunlight: 'Partial Shade to Full Sun',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 5,
+    planting_months: ['June', 'July', 'September', 'February', 'March'],
+    optimal_soil_type: ['Clay Loam'],
+    optimal_ph_range: [5.5, 7.0],
+  },
+  {
+    name: 'Tendli',
+    image: null,
+    color: '#81C784', // Borrowed from Cucumber for similar vine
+    noCount: 1,
+    spacingFeet: 1.5,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 3,
+    planting_months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    optimal_soil_type: ['Sandy Loam'],
+    optimal_ph_range: [6.0, 6.5],
+  },
+  {
+    name: 'Bitter Gourd',
+    image: null,
+    color: '#81C784', // Borrowed from Cucumber for similar vine
+    noCount: 1,
+    spacingFeet: 1.5,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 4,
+    planting_months: ['July', 'January', 'February', 'May'],
+    optimal_soil_type: ['Sandy Loam'],
+    optimal_ph_range: [6.0, 6.7],
+  },
+  {
+    name: 'Radish',
+    image: plantImages.Radish,
+    color: '#FF69B4',
+    noCount: 16, // Matches vegetables
+    spacingFeet: 0.5,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 3,
+    planting_months: ['September', 'October', 'November', 'December', 'January', 'February'],
+    optimal_soil_type: ['Sandy Loam'],
+    optimal_ph_range: [6.0, 7.0],
+  },
+  {
+    name: 'Basil',
+    image: null,
+    color: '#AED581', // Borrowed from Spinach for similar herb
+    noCount: 4,
+    spacingFeet: 1,
+    sunlight: 'Full Sun to Partial Shade',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 3,
+    planting_months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    optimal_soil_type: ['Loamy'],
+    optimal_ph_range: [6.0, 7.0],
+  },
+  {
+    name: 'Pepper',
+    image: null,
+    color: '#FFDBA4', // Borrowed from Chilli for similarity
+    noCount: 1,
+    spacingFeet: 1.5,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'High',
+    waterRequirement: 4,
+    planting_months: ['September', 'October', 'November', 'December', 'January', 'February'],
+    optimal_soil_type: ['Loamy'],
+    optimal_ph_range: [6.0, 6.8],
+  },
+  {
+    name: 'Potato',
+    image: plantImages.Potato,
+    color: '#F0D9FF',
+    noCount: 4, // Matches vegetables
+    spacingFeet: 1,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'High',
+    waterRequirement: 3,
+    planting_months: ['October', 'November', 'December', 'July'],
+    optimal_soil_type: ['Sandy Loam', 'Loamy'],
+    optimal_ph_range: [5.5, 6.5],
+  },
+  {
+    name: 'Sweet Potato',
+    image: null,
+    color: '#F0D9FF', // Borrowed from Potato
+    noCount: 1,
+    spacingFeet: 1.5,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 3,
+    planting_months: ['June', 'July', 'September', 'November', 'December'],
+    optimal_soil_type: ['Sandy Loam'],
+    optimal_ph_range: [5.5, 6.5],
+  },
+  {
+    name: 'Corn',
+    image: plantImages.Corn,
+    color: '#FFF176',
+    noCount: 1,
+    spacingFeet: 1.5,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'High',
+    waterRequirement: 4,
+    planting_months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    optimal_soil_type: ['Loamy'],
+    optimal_ph_range: [5.8, 7.0],
+  },
+  {
+    name: 'Cabbage',
+    image: null,
+    color: '#C5E1A5', // Borrowed from Lettuce for similar leafy crop
+    noCount: 1,
+    spacingFeet: 1.5,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'High',
+    waterRequirement: 4,
+    planting_months: ['October', 'November', 'December', 'January'],
+    optimal_soil_type: ['Loamy'],
+    optimal_ph_range: [6.0, 7.0],
+  },
+  {
+    name: 'Carrot',
+    image: null,
+    color: '#E57373', // Borrowed from Beet for similar root crop
+    noCount: 16,
+    spacingFeet: 0.25,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 3,
+    planting_months: ['October', 'November', 'December', 'January', 'February'],
+    optimal_soil_type: ['Sandy Loam'],
+    optimal_ph_range: [6.0, 6.8],
+  },
+  {
+    name: 'Cowpea',
+    image: plantImages.Cowpea,
+    color: '#A1887F',
+    noCount: 9, // Matches vegetables
+    spacingFeet: 0.5,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'Low',
+    waterRequirement: 2,
+    planting_months: ['June', 'July', 'October', 'November'],
+    optimal_soil_type: ['Sandy Loam'],
+    optimal_ph_range: [6.0, 7.0],
+  },
+  {
+    name: 'Pumpkin',
+    image: plantImages.Pumpkin,
+    color: '#FFC107',
+    noCount: 1,
+    spacingFeet: 4, // Average of 5 (vegetables) and 3 (plants)
+    sunlight: 'Full Sun',
+    nutrientLevel: 'High',
+    waterRequirement: 4,
+    planting_months: ['June', 'July', 'August', 'September'],
+    optimal_soil_type: ['Loamy', 'Sandy Loam'],
+    optimal_ph_range: [6.0, 6.8],
+  },
+  {
+    name: 'Ridge Gourd',
+    image: null,
+    color: '#81C784', // Borrowed from Cucumber
+    noCount: 1,
+    spacingFeet: 2,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'Moderate to High',
+    waterRequirement: 4,
+    planting_months: ['June', 'July'],
+    optimal_soil_type: ['Sandy Loam', 'Loamy'],
+    optimal_ph_range: [6.0, 7.5],
+  },
+  {
+    name: 'Cauliflower',
+    image: null,
+    color: '#C5E1A5', // Borrowed from Lettuce
+    noCount: 1,
+    spacingFeet: 1.5,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'High',
+    waterRequirement: 4,
+    planting_months: ['October', 'November', 'December', 'January', 'February'],
+    optimal_soil_type: ['Loamy', 'Clay Loam'],
+    optimal_ph_range: [5.5, 6.5],
+  },
+  {
+    name: 'Snake Gourd',
+    image: null,
+    color: '#81C784', // Borrowed from Cucumber
+    noCount: 1,
+    spacingFeet: 2,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 4,
+    planting_months: ['July', 'January'],
+    optimal_soil_type: ['Sandy Loam'],
+    optimal_ph_range: [6.5, 7.5],
+  },
+  {
+    name: 'Green Chilli',
+    image: null,
+    color: '#FFDBA4',
+    noCount: 4, // Matches Chilli in vegetables
+    spacingFeet: 1,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 3,
+    planting_months: ['January', 'February', 'March', 'April', 'May', 'June'],
+    optimal_soil_type: ['Loamy', 'Sandy Loam'],
+    optimal_ph_range: [6.0, 7.0],
+  },
+  {
+    name: 'Drumstick',
+    image: plantImages.Drumstick,
+    color: '#8BC34A',
+    noCount: 1,
+    spacingFeet: 6,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 3, // Estimated based on similar crops
+    planting_months: ['June', 'July', 'August'], // Common for tropical trees
+    optimal_soil_type: ['Sandy Loam', 'Loamy'],
+    optimal_ph_range: [6.0, 7.0],
+  },
+  {
+    name: 'Breadfruit',
+    image: plantImages.Breadfruit,
+    color: '#F7DC6F',
+    noCount: 1,
+    spacingFeet: 20,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 4, // Estimated for large tropical trees
+    planting_months: ['June', 'July', 'August'], // Common for tropical trees
+    optimal_soil_type: ['Sandy Loam', 'Loamy'],
+    optimal_ph_range: [5.5, 7.0],
+  },
+  {
+    name: 'Asparagus',
+    image: plantImages.Asparagus,
+    color: '#C4E17F',
+    noCount: 1,
+    spacingFeet: 1.5,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'High',
+    waterRequirement: 4, // Estimated based on nutrient needs
+    planting_months: ['February', 'March', 'April'], // Common for perennials
+    optimal_soil_type: ['Sandy Loam', 'Loamy'],
+    optimal_ph_range: [6.5, 7.5],
+  },
+  {
+    name: 'Beet',
+    image: plantImages.Beet,
+    color: '#E57373',
+    noCount: 16,
+    spacingFeet: 0.5,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 3, // Matches Radish
+    planting_months: ['September', 'October', 'November', 'December', 'January', 'February'],
+    optimal_soil_type: ['Sandy Loam', 'Loamy'],
+    optimal_ph_range: [6.0, 7.5],
+  },
+  {
+    name: 'Spinach',
+    image: plantImages.Spinach,
+    color: '#AED581',
+    noCount: 9,
+    spacingFeet: 0.5,
+    sunlight: 'Full Sun to Partial Shade',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 3, // Matches similar leafy greens
+    planting_months: ['September', 'October', 'November', 'February', 'March'],
+    optimal_soil_type: ['Sandy Loam', 'Loamy'],
+    optimal_ph_range: [6.0, 7.5],
+  },
+  {
+    name: 'Eggplant',
+    image: plantImages.Eggplant,
+    color: '#D4B8E2',
+    noCount: 1,
+    spacingFeet: 2,
+    sunlight: 'Full Sun',
+    nutrientLevel: 'Moderate',
+    waterRequirement: 3, // Matches Brinjal
+    planting_months: ['December', 'January', 'May', 'June'], // Matches Brinjal
+    optimal_soil_type: ['Loamy', 'Sandy Loam'],
+    optimal_ph_range: [5.5, 6.5],
+  },
 ];
 
   
@@ -660,5 +833,5 @@ const regionalFertilizers: RegionalFertilizer[] = [
 ];
 
 
-  export { crops, compatibility, vegetables, fertilizers, indianStates, regionalFertilizers };
+  export { crops, compatibility, plants, fertilizers, indianStates, regionalFertilizers };
   
