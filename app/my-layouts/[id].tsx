@@ -4,17 +4,18 @@ import {
   Text,
   Alert,
   Dimensions,
-  ScrollView,
   FlatList,
   Image,
   TouchableOpacity,
   Animated,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import { useUser } from '@clerk/clerk-expo';
 import axios from 'axios';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
@@ -25,6 +26,9 @@ import useWeather from '@/hooks/useWeather';
 import WeatherBanner from '@/components/WeatherBanner';
 import CustomButton from '@/components/Button';
 import { plants, compatibility } from '@/assets/data/plant';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { format } from 'date-fns'; // For formatting Date to HH:MM
+import { parse } from 'date-fns'; // For parsing HH:MM to Date
 
 const BASE_CELL_SIZE = Dimensions.get('window').width < 375 ? 40 : 48;
 
@@ -59,9 +63,25 @@ interface WateringHistory {
 }
 
 interface Task {
-  id: string;
+  _id: string;
   description: string;
   completed: boolean;
+  layoutId: string;
+  userId: string;
+  createdAt: string;
+}
+
+interface HarvestHistory {
+  id: string;
+  layoutId: string;
+  userId: string;
+  plantName: string;
+  date: string;
+}
+
+interface Section {
+  id: string;
+  render: () => JSX.Element | null;
 }
 
 const LayoutDetail = () => {
@@ -75,9 +95,13 @@ const LayoutDetail = () => {
   const [wateringSchedule, setWateringSchedule] = useState<WateringSchedule>({});
   const [wateringInsights, setWateringInsights] = useState<string[]>([]);
   const [wateringHistory, setWateringHistory] = useState<WateringHistory[]>([]);
+  const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
   const [waterLevels, setWaterLevels] = useState<{ [plantName: string]: Animated.Value }>({});
-  const [tasks, setTasks] = useState<Task[]>([]); // This state is declared but not used, consider removing if not needed.
-  const [tooltip, setTooltip] = useState<{ message: string; x: number; y: number } | null>(null); // This state is declared but not used, consider removing if not needed.
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [newTask, setNewTask] = useState('');
+  const [harvestHistory, setHarvestHistory] = useState<HarvestHistory[]>([]);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [notificationTime, setNotificationTime] = useState('08:00');
   const { weather, address, error } = useWeather();
 
   const weatherData = useMemo(() => {
@@ -105,29 +129,35 @@ const LayoutDetail = () => {
     };
   }, [weather]);
 
+  // Request notification permissions
+  useEffect(() => {
+    const requestPermissions = async () => {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Notifications are required for reminders.');
+        setNotificationsEnabled(false);
+      }
+    };
+    requestPermissions();
+  }, []);
+
+  const getTimeAsDate = () => {
+    if (!notificationTime || !/^\d{2}:\d{2}$/.test(notificationTime)) {
+      return new Date(new Date().setHours(8, 0, 0, 0)); // Default to 08:00
+    }
+    return parse(notificationTime, 'HH:mm', new Date());
+  };
+
+  // Fetch data
   useEffect(() => {
     if (id && userId) {
       fetchLayout();
       fetchWateringHistory();
+      fetchTasks();
+      fetchHarvestHistory();
+      fetchNotificationPreferences();
     }
-  }, [id, userId]); // Dependencies for initial data fetch
-
-  // Initialize water levels when layout is available
-  useEffect(() => {
-    if (layout) {
-      const levels: { [plantName: string]: Animated.Value } = {};
-      const plantList: { [key: string]: boolean } = {};
-      layout.grid.rows.forEach((row) => {
-        row.forEach((cell) => {
-          if (cell.plantName && !plantList[cell.plantName]) {
-            plantList[cell.plantName] = true;
-            levels[cell.plantName] = new Animated.Value(100);
-          }
-        });
-      });
-      setWaterLevels(levels);
-    }
-  }, [layout]); // Only run when layout changes
+  }, [id, userId]);
 
   const fetchLayout = useCallback(async () => {
     setLoading(true);
@@ -150,8 +180,416 @@ const LayoutDetail = () => {
       setWateringHistory(response.data);
     } catch (error) {
       console.error('Error fetching watering history:', error);
+      Alert.alert('Error', 'Failed to fetch watering history.');
     }
   }, [id]);
+
+  const fetchTasks = useCallback(async () => {
+  if (!user || !user.id) {
+    console.error('User or userId not available', { user });
+    Alert.alert('Error', 'User not authenticated.');
+    return;
+  }
+  try {
+    const response = await axios.get(
+      `${process.env.EXPO_PUBLIC_NODE_KEY}/api/tasks/layout/${id}?userId=${user.id}`
+    );
+    console.log('Fetched tasks:', response.data);
+    setTasks(response.data);
+  } catch (error) {
+    console.error('Error fetching tasks:', error);
+    if (axios.isAxiosError(error)) {
+      console.log('Axios error details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+    }
+    Alert.alert('Error', 'Failed to fetch tasks.');
+  }
+}, [id, user]);
+
+  const fetchHarvestHistory = useCallback(async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.EXPO_PUBLIC_NODE_KEY}/api/harvest-history/layout/${id}`
+      );
+      setHarvestHistory(response.data);
+    } catch (error) {
+      console.error('Error fetching harvest history:', error);
+      Alert.alert('Error', 'Failed to fetch harvest history.');
+    }
+  }, [id]);
+
+    const fetchNotificationPreferences = useCallback(async () => {
+    if (!user || !user.id) {
+      console.error('User or userId not available');
+      setNotificationsEnabled(true); // Default value
+      setNotificationTime('08:00'); // Default value
+      return;
+    }
+    try {
+      console.log('Fetching preferences for userId:', userId);
+      const response = await axios.get(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/notification-preferences/${userId}`);
+      setNotificationsEnabled(response.data.notificationsEnabled);
+      setNotificationTime(response.data.notificationTime);
+    } catch (error) {
+      console.error('Error fetching notification preferences:', error);
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        setNotificationsEnabled(true);
+        setNotificationTime('08:00');
+      } else {
+        Alert.alert('Error', 'Failed to fetch notification preferences.');
+      }
+    }
+  }, [user]);
+
+  const getWateringInterval = useCallback((plantName: string) => {
+    switch (plantName) {
+      case 'Okra':
+      case 'Tomato':
+      case 'Pumpkin':
+      case 'Eggplant':
+      case 'Potato':
+      case 'Asparagus':
+      case 'Onion':
+      case 'Cowpea':
+      case 'Corn':
+        return 3;
+      case 'Chilli':
+      case 'Beet':
+      case 'Spinach':
+      case 'Cucumber':
+      case 'Lettuce':
+        return 2;
+      case 'Drumstick':
+      case 'Breadfruit':
+        return 7;
+      case 'Radish':
+        return 1;
+      default:
+        return 3;
+    }
+  }, []);
+
+  const scheduleNotification = useCallback(
+  async (title: string, body: string, date: Date) => {
+    if (!notificationsEnabled) return;
+    try {
+      const now = new Date();
+      let triggerDate = new Date(date);
+      // If the time is earlier today, schedule for tomorrow
+      if (triggerDate <= now) {
+        triggerDate.setDate(triggerDate.getDate() + 1);
+      }
+      const secondsUntilTrigger = Math.floor((triggerDate.getTime() - now.getTime()) / 1000);
+      console.log(`Scheduling notification: ${title} at ${triggerDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} (${secondsUntilTrigger} seconds from now)`);
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: secondsUntilTrigger,
+          repeats: false,
+        },
+      });
+    } catch (error) {
+      console.error('Error scheduling notification:', error);
+      Alert.alert('Error', 'Failed to schedule notification.');
+    }
+  },
+  [notificationsEnabled]
+)
+
+  const addTask = useCallback(async () => {
+    if (!newTask.trim()) {
+      Alert.alert('Error', 'Task description cannot be empty.');
+      return;
+    }
+    try {
+      const response = await axios.post(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/tasks`, {
+        layoutId: id,
+        userId,
+        description: newTask,
+      });
+      setTasks([...tasks, response.data]);
+      setNewTask('');
+      const [hours, minutes] = notificationTime.split(':').map(Number);
+      const notificationDate = new Date();
+      notificationDate.setHours(hours, minutes, 0, 0);
+      if (notificationDate < new Date()) {
+        notificationDate.setDate(notificationDate.getDate() + 1);
+      }
+      await scheduleNotification('New Task', `Task: ${newTask}`, notificationDate);
+    } catch (error) {
+      console.error('Error adding task:', error);
+      Alert.alert('Error', 'Failed to add task.');
+    }
+  }, [id, userId, newTask, tasks, notificationTime, scheduleNotification]);
+
+    const toggleTask = useCallback(
+    async (taskId: string, completed: boolean) => {
+      if (!user || !user.id) {
+        console.error('User or userId not available', { user });
+        Alert.alert('Error', 'User not authenticated.');
+        return;
+      }
+      try {
+        const response = await axios.put(
+          `${process.env.EXPO_PUBLIC_NODE_KEY}/api/tasks/${taskId}`,
+          {
+            userId: user.id,
+            completed: !completed,
+          }
+        );
+        setTasks(
+          tasks.map((task) => (task._id === taskId ? response.data : task))
+        );
+        console.log('Toggled task:', response.data);
+      } catch (error) {
+        console.error('Error toggling task:', error);
+        if (axios.isAxiosError(error)) {
+          console.log('Axios error details:', {
+            status: error.response?.status,
+            data: error.response?.data,
+          });
+        }
+        Alert.alert('Error', 'Failed to update task.');
+      }
+    },
+    [tasks, user]
+  );
+
+    const deleteTask = useCallback(
+    async (taskId: string) => {
+      if (!user || !user.id) {
+        console.error('User or userId not available', { user });
+        Alert.alert('Error', 'User not authenticated.');
+        return;
+      }
+      Alert.alert('Confirm', 'Are you sure you want to delete this task?', [
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await axios.delete(
+                `${process.env.EXPO_PUBLIC_NODE_KEY}/api/tasks/${taskId}`,
+                {
+                  data: { userId: user.id }, // Send userId in body
+                }
+              );
+              setTasks(tasks.filter((task) => task._id !== taskId));
+              console.log('Deleted task:', taskId);
+            } catch (error) {
+              console.error('Error deleting task:', error);
+              if (axios.isAxiosError(error)) {
+                console.log('Axios error details:', {
+                  status: error.response?.status,
+                  data: error.response?.data,
+                });
+              }
+              Alert.alert('Error', 'Failed to delete task.');
+            }
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    },
+    [tasks, user]
+  );
+
+  const logHarvest = useCallback(
+    async (plantName: string) => {
+      const plant = plants.find((p) => p.name === plantName);
+      if (!plant) {
+        Alert.alert('Error', 'Plant not found.');
+        return;
+      }
+      const history = wateringHistory.find((h) => h.plantName === plantName);
+      const plantingDate = history?.wateringDates[0];
+      const daysSincePlanted = plantingDate
+        ? Math.floor((Date.now() - new Date(plantingDate).getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+      const daysToHarvest = plant.daysToHarvest || 60;
+      if (daysSincePlanted < daysToHarvest * 0.9) {
+        Alert.alert(
+          'Warning',
+          `${plantName} may not be ready for harvest yet. Expected in ~${daysToHarvest - daysSincePlanted} days.`,
+          [
+            {
+              text: 'Log Anyway',
+              onPress: async () => {
+                try {
+                  const response = await axios.post(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/harvest-history`, {
+                    layoutId: id,
+                    userId,
+                    plantName,
+                    date: new Date().toISOString().split('T')[0],
+                  });
+                  setHarvestHistory([...harvestHistory, response.data]);
+                  Alert.alert('Success', `${plantName} harvest logged!`);
+                } catch (error) {
+                  console.error('Error logging harvest:', error);
+                  Alert.alert('Error', 'Failed to log harvest.');
+                }
+              },
+            },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
+        return;
+      }
+      try {
+        const response = await axios.post(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/harvest-history`, {
+          layoutId: id,
+          userId,
+          plantName,
+          date: new Date().toISOString().split('T')[0],
+        });
+        setHarvestHistory([...harvestHistory, response.data]);
+        Alert.alert('Success', `${plantName} harvest logged!`);
+      } catch (error) {
+        console.error('Error logging harvest:', error);
+        Alert.alert('Error', 'Failed to log harvest.');
+      }
+    },
+    [id, userId, harvestHistory, wateringHistory]
+  );
+
+  const deleteHarvest = useCallback(
+    async (harvestId: string) => {
+      Alert.alert('Confirm', 'Are you sure you want to delete this harvest record?', [
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await axios.delete(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/harvest-history/${harvestId}`);
+              setHarvestHistory(harvestHistory.filter((h) => h.id !== harvestId));
+            } catch (error) {
+              console.error('Error deleting harvest:', error);
+              Alert.alert('Error', 'Failed to delete harvest record.');
+            }
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    },
+    [harvestHistory]
+  );
+
+  const saveNotificationPreferences = useCallback(async () => {
+  if (!user || !user.id) {
+    console.error('User or userId not available', { user });
+    Alert.alert('Error', 'User not authenticated.');
+    return;
+  }
+  if (!notificationTime || !/^\d{2}:\d{2}$/.test(notificationTime)) {
+    Alert.alert('Error', 'Please select a valid time.');
+    return;
+  }
+  try {
+    console.log('Saving preferences for userId:', user.id);
+    const response = await axios.post(
+      `${process.env.EXPO_PUBLIC_NODE_KEY}/api/notification-preferences/${user.id}`,
+      {
+        notificationsEnabled,
+        notificationTime,
+      }
+    );
+    console.log('Preferences saved:', response.data);
+    Alert.alert('Success', 'Notification preferences saved.');
+  } catch (error) {
+    console.error('Error saving notification preferences:', error);
+    if (axios.isAxiosError(error)) {
+      console.log('Axios error details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+    }
+    Alert.alert('Error', 'Failed to save notification preferences.');
+  }
+}, [user, notificationsEnabled, notificationTime]);
+
+  const updateWateringHistory = useCallback(
+    async (plantName: string) => {
+      const today = new Date().toISOString().split('T')[0];
+      try {
+        await axios.post(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/watering-history`, {
+          layoutId: id,
+          plantName,
+          date: today,
+        });
+        fetchWateringHistory();
+      } catch (error) {
+        console.error('Error logging watering:', error);
+        Alert.alert('Error', 'Failed to log watering.');
+      }
+    },
+    [id, fetchWateringHistory]
+  );
+
+  const logWatering = useCallback(
+    (plantName: string) => {
+      if (waterLevels[plantName]) {
+        Animated.sequence([
+          Animated.timing(waterLevels[plantName], {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: false,
+          }),
+          Animated.timing(waterLevels[plantName], {
+            toValue: 100,
+            duration: 800,
+            useNativeDriver: false,
+          }),
+        ]).start(async () => {
+          await updateWateringHistory(plantName);
+          const interval = getWateringInterval(plantName);
+          const nextWateringDate = new Date();
+          nextWateringDate.setDate(nextWateringDate.getDate() + interval);
+          const [hours, minutes] = notificationTime.split(':').map(Number);
+          nextWateringDate.setHours(hours, minutes, 0, 0);
+          await scheduleNotification(
+            `Water ${plantName}`,
+            `Time to water your ${plantName}!`,
+            nextWateringDate
+          );
+          const plant = plants.find((p) => p.name === plantName);
+          if (plant?.daysToHarvest) {
+            const harvestDate = new Date();
+            harvestDate.setDate(harvestDate.getDate() + plant.daysToHarvest);
+            harvestDate.setHours(hours, minutes, 0, 0);
+            await scheduleNotification(
+              `Harvest ${plantName}`,
+              `Your ${plantName} may be ready to harvest!`,
+              harvestDate
+            );
+          }
+        });
+      }
+    },
+    [waterLevels, updateWateringHistory, notificationTime, getWateringInterval, scheduleNotification]
+  );
+
+  // Initialize water levels
+  useEffect(() => {
+    if (layout) {
+      const levels: { [plantName: string]: Animated.Value } = {};
+      const plantList: { [key: string]: boolean } = {};
+      layout.grid.rows.forEach((row) => {
+        row.forEach((cell) => {
+          if (cell.plantName && !plantList[cell.plantName]) {
+            plantList[cell.plantName] = true;
+            levels[cell.plantName] = new Animated.Value(100);
+          }
+        });
+      });
+      setWaterLevels(levels);
+    }
+  }, [layout]);
 
   const generateColorMap = useCallback(() => {
     if (!layout) return {};
@@ -169,48 +607,7 @@ const LayoutDetail = () => {
       });
     });
     return colorMap;
-  }, [layout]); // Only re-create if layout changes
-
-  const getWateringInterval = useCallback((plantName: string) => {
-    switch (plantName) {
-      case 'Okra':
-        return 3;
-      case 'Tomato':
-        return 3;
-      case 'Chilli':
-        return 2;
-      case 'Drumstick':
-        return 7;
-      case 'Pumpkin':
-        return 3;
-      case 'Breadfruit':
-        return 7;
-      case 'Radish':
-        return 1;
-      case 'Eggplant':
-        return 3;
-      case 'Potato':
-        return 3;
-      case 'Asparagus':
-        return 3;
-      case 'Beet':
-        return 2;
-      case 'Spinach':
-        return 2;
-      case 'Corn':
-        return 3;
-      case 'Cucumber':
-        return 2;
-      case 'Onion':
-        return 3;
-      case 'Cowpea':
-        return 3;
-      case 'Lettuce':
-        return 2;
-      default:
-        return 3;
-    }
-  }, []); // This function has no external dependencies, so it only needs to be created once.
+  }, [layout]);
 
   const getGrowthStage = useCallback((plantName: string, days: number) => {
     const plant = plants.find((v) => v.name === plantName);
@@ -225,43 +622,44 @@ const LayoutDetail = () => {
     if (days <= stages.Vegetative) return 'Vegetative';
     if (days <= stages.Flowering) return 'Flowering';
     return 'Fruiting';
-  }, []); // No external dependencies
+  }, []);
 
-  const getBorderStyle = useCallback((row: number, col: number, plantName: string) => {
-    if (!plantName || !compatibility[0][plantName] || !layout) return { isCompanion: false, shouldAvoid: false };
-    const compInfo = compatibility[0][plantName] || { companions: [], avoid: [] };
-    let isCompanion = false;
-    let shouldAvoid = false;
-    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-    layout.grid.rows.forEach((r, ri) => {
-      r.forEach((c, ci) => {
-        if (directions.some(([dr, dc]) => ri === row + dr && ci === col + dc) && c.plantName) {
-          if (compInfo.companions && compInfo.companions.includes(c.plantName)) isCompanion = true;
-          if (compInfo.avoid && compInfo.avoid.includes(c.plantName)) shouldAvoid = true;
-        }
+  const getBorderStyle = useCallback(
+    (row: number, col: number, plantName: string) => {
+      if (!plantName || !compatibility[0][plantName] || !layout) return { isCompanion: false, shouldAvoid: false };
+      const compInfo = compatibility[0][plantName] || { companions: [], avoid: [] };
+      let isCompanion = false;
+      let shouldAvoid = false;
+      const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      layout.grid.rows.forEach((r, ri) => {
+        r.forEach((c, ci) => {
+          if (directions.some(([dr, dc]) => ri === row + dr && ci === col + dc) && c.plantName) {
+            if (compInfo.companions?.includes(c.plantName)) isCompanion = true;
+            if (compInfo.avoid?.includes(c.plantName)) shouldAvoid = true;
+          }
+        });
       });
-    });
-    return { isCompanion, shouldAvoid };
-  }, [layout]); // Depends on layout
+      return { isCompanion, shouldAvoid };
+    },
+    [layout]
+  );
 
   const showTooltip = useCallback((rowIndex: number, colIndex: number, message: string) => {
     Alert.alert('Plant Info', message);
-  }, []); // No external dependencies
+  }, []);
 
   const MemoizedColorMap = useMemo(() => generateColorMap(), [generateColorMap]);
 
-  // Generate watering calendar inside useEffect to prevent infinite loops
   useEffect(() => {
     if (!layout || !wateringHistory.length) {
-      setWateringSchedule({}); // Clear schedule if data is missing
+      setWateringSchedule({});
       return;
     }
-
     const schedule: WateringSchedule = {};
     const today = new Date();
     const futureDate = new Date(today);
     futureDate.setDate(today.getDate() + 30);
-    const colorMap = MemoizedColorMap; // Use the memoized color map
+    const colorMap = MemoizedColorMap;
 
     wateringHistory.forEach((item) => {
       item.wateringDates.forEach((date) => {
@@ -304,18 +702,16 @@ const LayoutDetail = () => {
     }
     schedule[todayString].dots.push({ color: '#000000' });
 
-    // Only update state if the schedule has actually changed to prevent unnecessary re-renders
     if (JSON.stringify(schedule) !== JSON.stringify(wateringSchedule)) {
       setWateringSchedule(schedule);
     }
-  }, [layout, wateringHistory, getWateringInterval, MemoizedColorMap]); // Dependencies for watering calendar generation
+  }, [layout, wateringHistory, getWateringInterval, MemoizedColorMap]);
 
   const generateWateringInsights = useCallback(() => {
     if (!layout || !weatherData || !weatherData.forecast) {
       setWateringInsights(['No insights available due to missing data.']);
       return;
     }
-
     const recommendations: string[] = [];
     const today = new Date().toISOString().split('T')[0];
     const todayForecast = weatherData.forecast?.find((day) => day.date === today);
@@ -326,14 +722,10 @@ const LayoutDetail = () => {
           plantList[cell.plantName] = true;
           const { isCompanion, shouldAvoid } = getBorderStyle(rowIndex, colIndex, cell.plantName);
           if (isCompanion) {
-            recommendations.push(
-              `Great pairing: ${cell.plantName} benefits from nearby companions. 🌿`
-            );
+            recommendations.push(`Great pairing: ${cell.plantName} benefits from nearby companions. 🌿`);
           }
           if (shouldAvoid) {
-            recommendations.push(
-              `Warning: ${cell.plantName} is near incompatible plants, consider relocating. ⚠️`
-            );
+            recommendations.push(`Warning: ${cell.plantName} is near incompatible plants, consider relocating. ⚠️`);
           }
         }
       });
@@ -341,13 +733,11 @@ const LayoutDetail = () => {
 
     const plantsNeedingWater: string[] = [];
     const todaySchedule = wateringSchedule[today];
-    const colorMap = MemoizedColorMap; // Use the memoized color map
+    const colorMap = MemoizedColorMap;
 
     if (todaySchedule && todaySchedule.marked) {
       Object.keys(plantList).forEach((plantName) => {
-        const needsWater = todaySchedule.dots.some(
-          (dot) => dot.color === colorMap[plantName]
-        );
+        const needsWater = todaySchedule.dots.some((dot) => dot.color === colorMap[plantName]);
         if (needsWater) plantsNeedingWater.push(plantName);
       });
     }
@@ -395,55 +785,7 @@ const LayoutDetail = () => {
       );
     }
     setWateringInsights(recommendations);
-  }, [layout, weatherData, wateringSchedule, getBorderStyle, MemoizedColorMap]); // Dependencies for insights generation
-
-  const updateWateringHistory = useCallback(async (plantName: string) => {
-    const today = new Date().toISOString().split('T')[0];
-    try {
-      await axios.post(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/watering-history`, {
-        layoutId: id,
-        plantName,
-        date: today,
-      });
-      fetchWateringHistory(); // Re-fetch history to update the calendar
-    } catch (error) {
-      console.error('Error logging watering:', error);
-      Alert.alert('Error', 'Failed to log watering.');
-    }
-  }, [id, fetchWateringHistory]); // Depends on id and fetchWateringHistory
-
-  const logWatering = useCallback((plantName: string) => {
-    if (waterLevels[plantName]) {
-      Animated.sequence([
-        Animated.timing(waterLevels[plantName], {
-          toValue: 0,
-          duration: 500,
-          useNativeDriver: false,
-        }),
-        Animated.timing(waterLevels[plantName], {
-          toValue: 100,
-          duration: 800,
-          useNativeDriver: false,
-        }),
-      ]).start(() => {
-        updateWateringHistory(plantName);
-      });
-    }
-  }, [waterLevels, updateWateringHistory]); // Depends on waterLevels and updateWateringHistory
-
-  const logHarvest = useCallback(async (plantName: string) => {
-    try {
-      await axios.post(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/harvest-history`, {
-        layoutId: id,
-        plantName,
-        date: new Date().toISOString().split('T')[0],
-      });
-      Alert.alert('Success', `${plantName} harvest logged!`);
-    } catch (error) {
-      console.error('Error logging harvest:', error);
-      Alert.alert('Error', 'Failed to log harvest.');
-    }
-  }, [id]);
+  }, [layout, weatherData, wateringSchedule, getBorderStyle, MemoizedColorMap]);
 
   const exportLayoutReport = useCallback(async () => {
     if (!layout) return;
@@ -467,6 +809,10 @@ const LayoutDetail = () => {
               .join(', ')}</li>`
         )
         .join('')}</ul>
+      <h2>Tasks</h2>
+      <ul>${tasks.map((task) => `<li>${task.description} (${task.completed ? 'Completed' : 'Pending'})</li>`).join('')}</ul>
+      <h2>Harvest History</h2>
+      <ul>${harvestHistory.map((harvest) => `<li>${harvest.plantName} on ${new Date(harvest.date).toLocaleDateString()}</li>`).join('')}</ul>
       <h2>Insights</h2>
       <ul>${wateringInsights.map((insight) => `<li>${insight}</li>`).join('')}</ul>
     `;
@@ -477,7 +823,7 @@ const LayoutDetail = () => {
       console.error('Error generating report:', error);
       Alert.alert('Error', 'Failed to generate report.');
     }
-  }, [layout, wateringSchedule, wateringInsights, MemoizedColorMap]); // Dependencies for report export
+  }, [layout, wateringSchedule, wateringInsights, MemoizedColorMap, tasks, harvestHistory]);
 
   const renderGrid = useCallback(() => {
     if (!layout) return null;
@@ -520,10 +866,10 @@ const LayoutDetail = () => {
         ))}
       </MotiView>
     );
-  }, [layout, getBorderStyle, showTooltip]); // Dependencies for renderGrid
+  }, [layout, getBorderStyle, showTooltip]);
 
   const renderColorLegend = useCallback(() => {
-    const colorMap = MemoizedColorMap; // Use the memoized color map
+    const colorMap = MemoizedColorMap;
     return (
       <View className="flex-row flex-wrap justify-start">
         {Object.entries(colorMap).map(([plantName, color]) => (
@@ -534,260 +880,468 @@ const LayoutDetail = () => {
         ))}
       </View>
     );
-  }, [MemoizedColorMap]); // Depends on the memoized color map
+  }, [MemoizedColorMap]);
 
   const renderPlantCards = useCallback(() => {
-  if (!layout) return null;
-  const plantListArray: Plant[] = []; // Changed to store plant objects
-  const seenPlantNames: { [key: string]: boolean } = {};
+    if (!layout) return null;
+    const plantListArray: Plant[] = [];
+    const seenPlantNames: { [key: string]: boolean } = {};
 
-  layout.grid.rows.forEach((row) => {
-    row.forEach((cell) => {
-      if (cell.plantName && !seenPlantNames[cell.plantName]) {
-        const plant = plants.find((v) => v.name === cell.plantName);
-        if (plant) {
-          plantListArray.push(plant);
-          seenPlantNames[cell.plantName] = true;
+    layout.grid.rows.forEach((row) => {
+      row.forEach((cell) => {
+        if (cell.plantName && !seenPlantNames[cell.plantName]) {
+          const plant = plants.find((v) => v.name === cell.plantName);
+          if (plant) {
+            plantListArray.push(plant);
+            seenPlantNames[cell.plantName] = true;
+          }
         }
-      }
+      });
     });
-  });
 
-  // Instead of returning the JSX directly, return the array of plant objects
-  return plantListArray;
-}, [layout]); // Dependencies remain the same as the data source hasn't changed.
+    return (
+      <FlatList
+        data={plantListArray}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(item) => item.name}
+        contentContainerStyle={{ paddingRight: 16 }}
+        renderItem={({ item: plant, index }) => {
+          const history = wateringHistory.find((h) => h.plantName === plant.name);
+          const plantingDate = history?.wateringDates[0];
+          const daysSincePlanted = plantingDate
+            ? Math.floor((Date.now() - new Date(plantingDate).getTime()) / (1000 * 60 * 60 * 24))
+            : 0;
+          const growthStage = getGrowthStage(plant.name, daysSincePlanted);
+          const daysToHarvest = plant.daysToHarvest || 60;
+          const isHarvestReady = daysSincePlanted >= daysToHarvest * 0.9;
+
+          return (
+            <MotiView
+              key={plant.name}
+              from={{ opacity: 0, translateY: 20 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ type: 'spring', delay: 100 * (index + 6) }}
+              className="bg-white p-4 rounded-2xl mb-4"
+              style={{ width: Dimensions.get('window').width * 0.8, marginRight: 16 }}
+            >
+              <View className="flex-row items-center mb-3">
+                <Image source={plant.image} className="w-16 h-16 rounded-full mr-3" resizeMode="contain" />
+                <View className="flex-1">
+                  <Text className="text-lg font-bold text-green-800">{plant.name}</Text>
+                  <Text className="text-sm text-gray-500">
+                    Stage: {growthStage} {growthStage === 'Seedling' ? '🌱' : growthStage === 'Flowering' ? '🌸' : '🍅'}
+                  </Text>
+                  <Text className={`text-sm ${isHarvestReady ? 'text-green-600' : 'text-gray-600'}`}>
+                    {isHarvestReady
+                      ? 'Ready to harvest!'
+                      : `Harvest in ~${Math.max(0, daysToHarvest - daysSincePlanted)} days`}
+                  </Text>
+                </View>
+              </View>
+              <View className="flex-row justify-between mb-2">
+                <Text className="text-sm text-gray-600">
+                  Water every {getWateringInterval(plant.name)} days
+                </Text>
+                {plant.daysToHarvest && plantingDate && (
+                  <Text className="text-sm text-gray-600">
+                    Expected Harvest:{' '}
+                    {new Date(
+                      new Date(plantingDate).setDate(new Date(plantingDate).getDate() + daysToHarvest)
+                    ).toLocaleDateString()}
+                  </Text>
+                )}
+              </View>
+              <View className="bg-gray-100 rounded-full h-3 overflow-hidden mb-3">
+                <Animated.View
+                  className="bg-blue-400 h-3 rounded-full"
+                  style={{
+                    width: waterLevels[plant.name]?.interpolate({
+                      inputRange: [0, 100],
+                      outputRange: ['0%', '100%'],
+                    }),
+                  }}
+                />
+              </View>
+              <View className="flex-row justify-between">
+                <CustomButton
+                  title="Log Watering"
+                  bgVariant="plant"
+                  onPress={() => logWatering(plant.name)}
+                  className="flex-1 mr-2 py-2 rounded-lg"
+                />
+                <CustomButton
+                  title="Log Harvest"
+                  bgVariant={isHarvestReady ? 'secondary' : 'danger'}
+                  onPress={() => logHarvest(plant.name)}
+                  className="flex-1 ml-2 py-2 rounded-lg"
+                  disabled={!isHarvestReady}
+                />
+              </View>
+            </MotiView>
+          );
+        }}
+      />
+    );
+  }, [layout, wateringHistory, getWateringInterval, getGrowthStage, waterLevels, logWatering, logHarvest]);
+
+  const renderMotivationalBanner = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, translateY: -20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 50 }}
+      className="my-4 bg-green-100 p-4 rounded-lg"
+    >
+      <Text className="text-sm text-green-800 italic">
+        With every seed sown and every plant nurtured, you pour your heart and soul into your garden. Your passion
+        shines in every vibrant bloom!
+      </Text>
+    </MotiView>
+  ), []);
+
+  const renderHeader = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, translateY: -20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 100 }}
+      className="my-4"
+    >
+      <Text className="mx-auto text-3xl font-bold text-green-800">{layout?.name || 'My Garden Layout'}</Text>
+      <Text className="mx-auto text-sm text-gray-500 font-bold mt-2">
+        Created: {layout?.createdAt ? new Date(layout.createdAt).toLocaleDateString() : 'N/A'}
+      </Text>
+    </MotiView>
+  ), [layout]);
+
+  const renderWeather = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ type: 'spring', delay: 200 }}
+      className="my-4"
+    >
+      {weather && address ? (
+        <WeatherBanner
+          weather={weather}
+          address={address}
+          style={{
+            backgroundColor: '#E6F3FA',
+            borderRadius: 12,
+            padding: 16,
+          }}
+        />
+      ) : error ? (
+        <Text className="text-red-500 text-center">Weather data unavailable</Text>
+      ) : (
+        <View className="h-24 justify-center items-center bg-gray-100 rounded-lg">
+          <ActivityIndicator size="small" color="#4CAF50" />
+          <Text className="text-gray-600 mt-2">Loading weather...</Text>
+        </View>
+      )}
+    </MotiView>
+  ), [weather, address, error]);
+
+  const renderGardenLayout = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 300 }}
+      className="my-4 bg-white p-5 rounded-2xl shadow-md"
+    >
+      <Text className="text-xl font-bold text-green-800 mb-3">Garden Layout</Text>
+      {renderGrid()}
+    </MotiView>
+  ), [renderGrid]);
+
+  const renderWateringSchedule = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 400 }}
+      className="my-4 bg-white p-5 rounded-2xl shadow-md"
+    >
+      <Text className="text-xl font-bold text-green-800 mb-3">Watering Schedule</Text>
+      <Calendar
+        style={{
+          borderRadius: 12,
+          backgroundColor: '#F9FAFB',
+        }}
+        theme={{
+          backgroundColor: '#F9FAFB',
+          calendarBackground: '#F9FAFB',
+          textSectionTitleColor: '#16A34A',
+          selectedDayBackgroundColor: '#16A34A',
+          selectedDayTextColor: '#FFFFFF',
+          todayTextColor: '#16A34A',
+          dayTextColor: '#1F2937',
+          dotColor: '#16A34A',
+          selectedDotColor: '#FFFFFF',
+          textDayFontWeight: '500',
+        }}
+        markedDates={Object.keys(wateringSchedule).reduce(
+          (acc: { [key: string]: { dots: { color: string }[]; marked: boolean } }, date) => {
+            acc[date] = {
+              dots: wateringSchedule[date].dots,
+              marked: wateringSchedule[date].marked,
+            };
+            return acc;
+          },
+          {}
+        )}
+        markingType={'multi-dot'}
+      />
+      <View className="mt-3 bg-gray-100 p-3 rounded-lg">
+        <Text className="text-sm font-semibold text-gray-700 mb-2">Legend</Text>
+        {renderColorLegend()}
+        <View className="flex-row items-center justify-center mt-2">
+          <View className="bg-black w-3 h-3 rounded-full mr-1" />
+          <Text className="text-xs text-gray-600">Today</Text>
+        </View>
+      </View>
+    </MotiView>
+  ), [wateringSchedule, renderColorLegend]);
+
+  const renderWateringRecommendations = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 500 }}
+      className="my-4 bg-white p-5 rounded-2xl shadow-md"
+    >
+      <Text className="text-xl font-bold text-green-800 mb-3">Watering Recommendations</Text>
+      {wateringInsights.length > 0 ? (
+        wateringInsights.map((insight, index) => (
+          <TouchableOpacity
+            key={index}
+            className="flex-row items-center bg-gray-50 p-3 rounded-lg mb-2"
+            activeOpacity={0.9}
+          >
+            <MaterialCommunityIcons
+              name={insight.includes('water') ? 'water' : insight.includes('heat') ? 'weather-sunny' : 'leaf'}
+              size={20}
+              color="#16A34A"
+              style={{ marginRight: 8 }}
+            />
+            <Text className="text-sm text-gray-700 flex-1">{insight}</Text>
+          </TouchableOpacity>
+        ))
+      ) : (
+        <Text className="text-sm text-gray-500 italic">Generate insights to see recommendations.</Text>
+      )}
+      <CustomButton
+        title="Generate Insights"
+        bgVariant="plant"
+        onPress={generateWateringInsights}
+        className="mt-4 py-3 rounded-xl"
+      />
+    </MotiView>
+  ), [wateringInsights, generateWateringInsights]);
+
+  const renderMyPlants = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 550 }}
+      className="my-4"
+    >
+      <Text className="text-xl font-bold text-green-800 mb-3">My Plants</Text>
+      {renderPlantCards()}
+    </MotiView>
+  ), [renderPlantCards]);
+
+  const renderTasks = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 600 }}
+      className="my-4 bg-white p-5 rounded-2xl shadow-md"
+    >
+      <Text className="text-xl font-bold text-green-800 mb-3">Tasks</Text>
+      <TextInput
+        value={newTask}
+        onChangeText={setNewTask}
+        placeholder="Add a new task (e.g., Fertilize tomatoes)"
+        className="border border-gray-300 p-3 rounded-lg mb-3 text-sm"
+      />
+      <CustomButton
+        title="Add Task"
+        bgVariant="plant"
+        onPress={addTask}
+        className="mb-4 py-3 rounded-xl"
+      />
+      {tasks.length === 0 ? (
+        <Text className="text-sm text-gray-500 italic">No tasks added yet.</Text>
+      ) : (
+        <FlatList
+          data={tasks}
+          keyExtractor={(item) => item._id}
+          renderItem={({ item }) => (
+            <View className="flex-row items-center justify-between bg-gray-50 p-3 rounded-lg mb-2">
+              <TouchableOpacity
+                onPress={() => toggleTask(item._id, item.completed)}
+                className="flex-row items-center flex-1"
+              >
+                <Ionicons
+                  name={item.completed ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={20}
+                  color={item.completed ? '#16A34A' : '#6B7280'}
+                  style={{ marginRight: 8 }}
+                />
+                <Text
+                  className={`text-sm ${item.completed ? 'text-gray-400 line-through' : 'text-gray-700'}`}
+                >
+                  {item.description}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => deleteTask(item._id)}>
+                <Ionicons name="trash-outline" size={20} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
+          )}
+          scrollEnabled={false}
+        />
+      )}
+    </MotiView>
+  ), [tasks, newTask, addTask, toggleTask, deleteTask]);
+
+  const renderHarvestHistory = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 650 }}
+      className="my-4 bg-white p-5 rounded-2xl shadow-md"
+    >
+      <Text className="text-xl font-bold text-green-800 mb-3">Harvest History</Text>
+      {harvestHistory.length === 0 ? (
+        <Text className="text-sm text-gray-500 italic">No harvests logged yet.</Text>
+      ) : (
+        <FlatList
+          data={harvestHistory}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View className="flex-row items-center justify-between bg-gray-50 p-3 rounded-lg mb-2">
+              <Text className="text-sm text-gray-700">
+                {item.plantName} harvested on {new Date(item.date).toLocaleDateString()}
+              </Text>
+              <TouchableOpacity onPress={() => deleteHarvest(item.id)}>
+                <Ionicons name="trash-outline" size={20} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
+          )}
+          scrollEnabled={false}
+        />
+      )}
+    </MotiView>
+  ), [harvestHistory, deleteHarvest]);
+
+  const renderNotificationPreferences = useCallback(() => (
+  <MotiView
+    from={{ opacity: 0, translateY: 20 }}
+    animate={{ opacity: 1, translateY: 0 }}
+    transition={{ type: 'spring', delay: 700 }}
+    className="my-4 bg-white p-5 rounded-2xl shadow-md"
+  >
+    <Text className="text-xl font-bold text-green-800 mb-3">Notification Preferences</Text>
+    <View className="flex-row items-center mb-3">
+      <Text className="text-sm text-gray-600 mr-2">Enable Notifications</Text>
+      <TouchableOpacity
+        onPress={() => setNotificationsEnabled(!notificationsEnabled)}
+        className="p-2"
+      >
+        <Ionicons
+          name={notificationsEnabled ? 'notifications' : 'notifications-off'}
+          size={24}
+          color={notificationsEnabled ? '#16A34A' : '#6B7280'}
+        />
+      </TouchableOpacity>
+    </View>
+    <View className="mb-3">
+      <Text className="text-sm text-gray-600 mb-1">Notification Time</Text>
+      <TouchableOpacity
+        onPress={() => setShowTimePicker(true)}
+        className="border border-gray-300 p-3 rounded-lg bg-gray-50 flex-row justify-between items-center"
+      >
+        <Text className="text-sm text-gray-700">{notificationTime || '08:00'}</Text>
+        <Ionicons name="time-outline" size={20} color="#6B7280" />
+      </TouchableOpacity>
+    </View>
+    {showTimePicker && (
+      <DateTimePicker
+        value={getTimeAsDate()}
+        mode="time"
+        is24Hour={true}
+        style={{ marginTop: 5, marginBottom: 10 }}
+        display="default"
+        onChange={(event, selectedTime) => {
+          // setShowTimePicker(false);
+          if (selectedTime) {
+            const formattedTime = format(selectedTime, 'HH:mm');
+            setNotificationTime(formattedTime);
+          }
+        }}
+      />
+    )}
+    <CustomButton
+      title="Save Preferences"
+      bgVariant="plant"
+      onPress={saveNotificationPreferences}
+      className="py-3 rounded-xl"
+    />
+  </MotiView>
+), [notificationsEnabled, notificationTime, showTimePicker]);
+
+  const renderExportReport = useCallback(() => (
+    <CustomButton
+      title="Export Garden Report"
+      bgVariant="plant"
+      onPress={exportLayoutReport}
+      className="my-4 py-3 rounded-xl"
+    />
+  ), [exportLayoutReport]);
+
+  const sections: Section[] = useMemo(() => [
+    { id: 'motivationalBanner', render: renderMotivationalBanner },
+    { id: 'header', render: renderHeader },
+    { id: 'weather', render: renderWeather },
+    { id: 'gardenLayout', render: renderGardenLayout },
+    { id: 'wateringSchedule', render: renderWateringSchedule },
+    { id: 'wateringRecommendations', render: renderWateringRecommendations },
+    { id: 'myPlants', render: renderMyPlants },
+    { id: 'tasks', render: renderTasks },
+    { id: 'harvestHistory', render: renderHarvestHistory },
+    { id: 'notificationPreferences', render: renderNotificationPreferences },
+    { id: 'exportReport', render: renderExportReport },
+  ], [
+    renderMotivationalBanner,
+    renderHeader,
+    renderWeather,
+    renderGardenLayout,
+    renderWateringSchedule,
+    renderWateringRecommendations,
+    renderMyPlants,
+    renderTasks,
+    renderHarvestHistory,
+    renderNotificationPreferences,
+    renderExportReport,
+  ]);
+
+  if (loading) {
+    return (
+      <LinearGradient colors={['#D1FAE5', '#F0FFF4']} className="flex-1 justify-center" style={{ paddingTop: insets.top }}>
+        <ActivityIndicator size="large" color="#4CAF50" />
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient colors={['#D1FAE5', '#F0FFF4']} className="flex-1" style={{ paddingTop: insets.top }}>
-      {loading ? (
-        <ActivityIndicator size="large" color="#4CAF50" className="mt-10" />
-      ) : (
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}>
-          <MotiView
-            from={{ opacity: 0, translateY: -20 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'spring', delay: 100 }}
-            className="my-4"
-          >
-            <Text className="mx-auto text-3xl font-bold text-green-800">
-              {layout?.name || 'My Garden Layout'}
-            </Text>
-            <Text className="mx-auto text-sm text-gray-500 font-bold mt-2">
-              Created: {layout?.createdAt ? new Date(layout.createdAt).toLocaleDateString() : 'N/A'}
-            </Text>
-          </MotiView>
-
-          <MotiView
-            from={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: 'spring', delay: 200 }}
-            className="my-4"
-          >
-            {weather && address ? (
-              <WeatherBanner
-                weather={weather}
-                address={address}
-                style={{
-                  backgroundColor: '#E6F3FA',
-                  borderRadius: 12,
-                  padding: 16,
-                }}
-              />
-            ) : error ? (
-              <Text className="text-red-500 text-center">Weather data unavailable</Text>
-            ) : (
-              <View className="h-24 justify-center items-center bg-gray-100 rounded-lg">
-                <ActivityIndicator size="small" color="#4CAF50" />
-                <Text className="text-gray-600 mt-2">Loading weather...</Text>
-              </View>
-            )}
-          </MotiView>
-
-          <MotiView
-            from={{ opacity: 0, translateY: 20 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'spring', delay: 300 }}
-            className="my-4 bg-white p-5 rounded-2xl shadow-md"
-          >
-            <Text className="text-xl font-bold text-green-800 mb-3">Garden Layout</Text>
-            {renderGrid()}
-          </MotiView>
-
-          <MotiView
-            from={{ opacity: 0, translateY: 20 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'spring', delay: 400 }}
-            className="mt-6 bg-white p-5 rounded-2xl shadow-md"
-          >
-            <Text className="text-xl font-bold text-green-800 mb-3">Watering Schedule</Text>
-            <Calendar
-              style={{
-                borderRadius: 12,
-                backgroundColor: '#F9FAFB',
-              }}
-              theme={{
-                backgroundColor: '#F9FAFB',
-                calendarBackground: '#F9FAFB',
-                textSectionTitleColor: '#16A34A',
-                selectedDayBackgroundColor: '#16A34A',
-                selectedDayTextColor: '#FFFFFF',
-                todayTextColor: '#16A34A',
-                dayTextColor: '#1F2937',
-                dotColor: '#16A34A',
-                selectedDotColor: '#FFFFFF',
-                textDayFontWeight: '500',
-              }}
-              markedDates={Object.keys(wateringSchedule).reduce(
-                (acc: { [key: string]: { dots: { color: string }[]; marked: boolean } }, date) => {
-                  acc[date] = {
-                    dots: wateringSchedule[date].dots,
-                    marked: wateringSchedule[date].marked,
-                  };
-                  return acc;
-                },
-                {}
-              )}
-              markingType={'multi-dot'}
-            />
-            <View className="mt-3 bg-gray-100 p-3 rounded-lg">
-              <Text className="text-sm font-semibold text-gray-700 mb-2">Legend</Text>
-              {renderColorLegend()}
-              <View className="flex-row items-center justify-center mt-2">
-                <View className="bg-black w-3 h-3 rounded-full mr-1" />
-                <Text className="text-xs text-gray-600">Today</Text>
-              </View>
-            </View>
-          </MotiView>
-
-          <MotiView
-            from={{ opacity: 0, translateY: 20 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'spring', delay: 500 }}
-            className="mt-6 bg-white p-5 rounded-2xl shadow-md"
-          >
-            <Text className="text-xl font-bold text-green-800 mb-3">Watering Recommendations</Text>
-            {wateringInsights.length > 0 ? (
-              wateringInsights.map((insight, index) => (
-                <TouchableOpacity
-                  key={index}
-                  className="flex-row items-center bg-gray-50 p-3 rounded-lg mb-2"
-                  activeOpacity={0.9}
-                >
-                  <MaterialCommunityIcons
-                    name={insight.includes('water') ? 'water' : insight.includes('heat') ? 'weather-sunny' : 'leaf'}
-                    size={20}
-                    color="#16A34A"
-                    style={{ marginRight: 8 }}
-                  />
-                  <Text className="text-sm text-gray-700 flex-1">{insight}</Text>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <Text className="text-sm text-gray-500 italic">Generate insights to see recommendations.</Text>
-            )}
-            <CustomButton
-              title="Generate Insights"
-              bgVariant="plant"
-              onPress={generateWateringInsights}
-              className="mt-4 py-3 rounded-xl"
-            />
-          </MotiView>
-
-          <MotiView
-            from={{ opacity: 0, translateY: 20 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'spring', delay: 700 }}
-            className="mt-6"
-          >
-            <Text className="text-xl font-bold text-green-800 mb-3">My Plants</Text>
-            {/* --- START CHANGES HERE --- */}
-            <FlatList
-              data={renderPlantCards()} // Pass the array of plant objects
-              horizontal // Enable horizontal scrolling
-              showsHorizontalScrollIndicator={false} // Hide the scroll indicator
-              keyExtractor={(item) => item.name} // Unique key for each plant card
-              contentContainerStyle={{ paddingRight: 16 }} // Add some padding to the end
-              renderItem={({ item: plant, index }) => { // item is now a plant object
-                const history = wateringHistory.find((h) => h.plantName === plant.name);
-                const plantingDate = history?.wateringDates[0];
-                const daysSincePlanted = plantingDate
-                  ? Math.floor((Date.now() - new Date(plantingDate).getTime()) / (1000 * 60 * 60 * 24))
-                  : 0;
-                const growthStage = getGrowthStage(plant.name, daysSincePlanted);
-                const harvestDate = plantingDate
-                  ? new Date(new Date(plantingDate).setDate(new Date(plantingDate).getDate() + (plant.daysToHarvest || 60)))
-                  : null;
-
-                return (
-                  <MotiView
-                    key={plant.name} // Use plant.name for key here, as FlatList needs it
-                    from={{ opacity: 0, translateY: 20 }}
-                    animate={{ opacity: 1, translateY: 0 }}
-                    transition={{ type: 'spring', delay: 100 * (index + 6) }}
-                    className="bg-white p-4 rounded-2xl mb-4"
-                    // Add width for each card so they don't take up full screen
-                    style={{ width: Dimensions.get('window').width * 0.8, marginRight: 16 }} // Adjust width and margin as needed
-                  >
-                    <View className="flex-row items-center mb-3">
-                      <Image source={plant.image} className="w-16 h-16 rounded-full mr-3" resizeMode="contain" />
-                      <View className="flex-1">
-                        <Text className="text-lg font-bold text-green-800">{plant.name}</Text>
-                        <Text className="text-sm text-gray-500">
-                          Stage: {growthStage} {growthStage === 'Seedling' ? '🌱' : growthStage === 'Flowering' ? '🌸' : '🍅'}
-                        </Text>
-                      </View>
-                    </View>
-                    <View className="flex-row justify-between mb-2">
-                      <Text className="text-sm text-gray-600">
-                        Water every {getWateringInterval(plant.name)} days
-                      </Text>
-                      {harvestDate && (
-                        <Text className="text-sm text-gray-600">
-                          Harvest: {harvestDate.toLocaleDateString()}
-                        </Text>
-                      )}
-                    </View>
-                    <View className="bg-gray-100 rounded-full h-3 overflow-hidden mb-3">
-                      <Animated.View
-                        className="bg-blue-400 h-3 rounded-full"
-                        style={{
-                          width: waterLevels[plant.name]?.interpolate({
-                            inputRange: [0, 100],
-                            outputRange: ['0%', '100%'],
-                          }),
-                        }}
-                      />
-                    </View>
-                    <View className="flex-row justify-between">
-                      <CustomButton
-                        title="Log Watering"
-                        bgVariant="plant"
-                        onPress={() => logWatering(plant.name)}
-                        className="flex-1 mr-2 py-2 rounded-lg"
-                      />
-                      <CustomButton
-                        title="Log Harvest"
-                        bgVariant="secondary"
-                        onPress={() => logHarvest(plant.name)}
-                        className="flex-1 ml-2 py-2 rounded-lg"
-                      />
-                    </View>
-                  </MotiView>
-                    );
-                  }}
-                />
-                {/* --- END CHANGES HERE --- */}
-              </MotiView>
-
-          <CustomButton
-            title="Export Garden Report"
-            bgVariant="plant"
-            onPress={exportLayoutReport}
-            className="mt-6 py-3 rounded-xl"
-          />
-        </ScrollView>
-      )}
-
+      <FlatList
+        data={sections}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => item.render()}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
+      />
       <TouchableOpacity
         onPress={() => router.back()}
         className="absolute top-4 left-4 bg-white rounded-full p-3 shadow-lg"
