@@ -10,6 +10,7 @@ import {
   Animated,
   ActivityIndicator,
   TextInput,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Notifications from 'expo-notifications';
@@ -27,8 +28,7 @@ import WeatherBanner from '@/components/WeatherBanner';
 import CustomButton from '@/components/Button';
 import { plants, compatibility } from '@/assets/data/plant';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { format } from 'date-fns'; // For formatting Date to HH:MM
-import { parse } from 'date-fns'; // For parsing HH:MM to Date
+import { format, parse } from 'date-fns';
 
 const BASE_CELL_SIZE = Dimensions.get('window').width < 375 ? 40 : 48;
 
@@ -143,7 +143,7 @@ const LayoutDetail = () => {
 
   const getTimeAsDate = () => {
     if (!notificationTime || !/^\d{2}:\d{2}$/.test(notificationTime)) {
-      return new Date(new Date().setHours(8, 0, 0, 0)); // Default to 08:00
+      return new Date(new Date().setHours(8, 0, 0, 0));
     }
     return parse(notificationTime, 'HH:mm', new Date());
   };
@@ -207,6 +207,8 @@ const LayoutDetail = () => {
     Alert.alert('Error', 'Failed to fetch tasks.');
   }
 }, [id, user]);
+
+
 
   const fetchHarvestHistory = useCallback(async () => {
     try {
@@ -481,37 +483,37 @@ const LayoutDetail = () => {
   );
 
   const saveNotificationPreferences = useCallback(async () => {
-  if (!user || !user.id) {
-    console.error('User or userId not available', { user });
-    Alert.alert('Error', 'User not authenticated.');
-    return;
-  }
-  if (!notificationTime || !/^\d{2}:\d{2}$/.test(notificationTime)) {
-    Alert.alert('Error', 'Please select a valid time.');
-    return;
-  }
-  try {
-    console.log('Saving preferences for userId:', user.id);
-    const response = await axios.post(
-      `${process.env.EXPO_PUBLIC_NODE_KEY}/api/notification-preferences/${user.id}`,
-      {
-        notificationsEnabled,
-        notificationTime,
-      }
-    );
-    console.log('Preferences saved:', response.data);
-    Alert.alert('Success', 'Notification preferences saved.');
-  } catch (error) {
-    console.error('Error saving notification preferences:', error);
-    if (axios.isAxiosError(error)) {
-      console.log('Axios error details:', {
-        status: error.response?.status,
-        data: error.response?.data,
-      });
+    if (!user || !user.id) {
+      console.error('User or userId not available', { user });
+      Alert.alert('Error', 'User not authenticated.');
+      return;
     }
-    Alert.alert('Error', 'Failed to save notification preferences.');
-  }
-}, [user, notificationsEnabled, notificationTime]);
+    if (!notificationTime || !/^\d{2}:\d{2}$/.test(notificationTime)) {
+      Alert.alert('Error', 'Please select a valid time.');
+      return;
+    }
+    try {
+      console.log('Saving preferences for userId:', user.id);
+      const response = await axios.post(
+        `${process.env.EXPO_PUBLIC_NODE_KEY}/api/notification-preferences/${user.id}`,
+        {
+          notificationsEnabled,
+          notificationTime,
+        }
+      );
+      console.log('Preferences saved:', response.data);
+      Alert.alert('Success', 'Notification preferences saved.');
+    } catch (error) {
+      console.error('Error saving notification preferences:', error);
+      if (axios.isAxiosError(error)) {
+        console.log('Axios error details:', {
+          status: error.response?.status,
+          data: error.response?.data,
+        });
+      }
+      Alert.alert('Error', 'Failed to save notification preferences.');
+    }
+  }, [user, notificationsEnabled, notificationTime]);
 
   const updateWateringHistory = useCallback(
     async (plantName: string) => {
@@ -1235,60 +1237,68 @@ const LayoutDetail = () => {
   ), [harvestHistory, deleteHarvest]);
 
   const renderNotificationPreferences = useCallback(() => (
-  <MotiView
-    from={{ opacity: 0, translateY: 20 }}
-    animate={{ opacity: 1, translateY: 0 }}
-    transition={{ type: 'spring', delay: 700 }}
-    className="my-4 bg-white p-5 rounded-2xl shadow-md"
-  >
-    <Text className="text-xl font-bold text-green-800 mb-3">Notification Preferences</Text>
-    <View className="flex-row items-center mb-3">
-      <Text className="text-sm text-gray-600 mr-2">Enable Notifications</Text>
-      <TouchableOpacity
-        onPress={() => setNotificationsEnabled(!notificationsEnabled)}
-        className="p-2"
-      >
-        <Ionicons
-          name={notificationsEnabled ? 'notifications' : 'notifications-off'}
-          size={24}
-          color={notificationsEnabled ? '#16A34A' : '#6B7280'}
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 700 }}
+      className="my-4 bg-white p-5 rounded-2xl shadow-md"
+    >
+      <Text className="text-xl font-bold text-green-800 mb-3">Notification Preferences</Text>
+      <View className="flex-row items-center mb-3">
+        <Text className="text-sm text-gray-600 mr-2">Enable Notifications</Text>
+        <TouchableOpacity
+          onPress={() => setNotificationsEnabled(!notificationsEnabled)}
+          className="p-2"
+          accessibilityLabel={notificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
+        >
+          <Ionicons
+            name={notificationsEnabled ? 'notifications' : 'notifications-off'}
+            size={24}
+            color={notificationsEnabled ? '#16A34A' : '#6B7280'}
+          />
+        </TouchableOpacity>
+      </View>
+      <View className="mb-3">
+        <Text className="text-sm text-gray-600 mb-1">Notification Time</Text>
+        <TouchableOpacity
+          onPress={() => setShowTimePicker(true)}
+          className="border border-gray-300 p-3 rounded-lg bg-gray-50 flex-row justify-between items-center"
+          accessibilityLabel={`Select notification time, currently set to ${notificationTime}`}
+        >
+          <Text className="text-sm text-gray-700">{notificationTime || '08:00'}</Text>
+          <Ionicons name="time-outline" size={20} color="#6B7280" />
+        </TouchableOpacity>
+      </View>
+      {showTimePicker && (
+        <DateTimePicker
+          value={getTimeAsDate()}
+          mode="time"
+          is24Hour={true}
+          style={{ marginTop: 5, marginBottom: 10 }}
+          display={Platform.OS === 'ios' ? 'inline' : 'default'}
+          onChange={(event, selectedTime) => {
+            if (Platform.OS === 'android' && event.type === 'set' && selectedTime) {
+              setShowTimePicker(false); // Hide picker on Android after selection
+              const formattedTime = format(selectedTime, 'HH:mm');
+              setNotificationTime(formattedTime);
+            } else if (Platform.OS === 'ios' && selectedTime) {
+              // iOS picker stays open (modal behavior), update time immediately
+              const formattedTime = format(selectedTime, 'HH:mm');
+              setNotificationTime(formattedTime);
+            } else if (event.type === 'dismissed') {
+              setShowTimePicker(false); // Hide picker on dismiss (both platforms)
+            }
+          }}
         />
-      </TouchableOpacity>
-    </View>
-    <View className="mb-3">
-      <Text className="text-sm text-gray-600 mb-1">Notification Time</Text>
-      <TouchableOpacity
-        onPress={() => setShowTimePicker(true)}
-        className="border border-gray-300 p-3 rounded-lg bg-gray-50 flex-row justify-between items-center"
-      >
-        <Text className="text-sm text-gray-700">{notificationTime || '08:00'}</Text>
-        <Ionicons name="time-outline" size={20} color="#6B7280" />
-      </TouchableOpacity>
-    </View>
-    {showTimePicker && (
-      <DateTimePicker
-        value={getTimeAsDate()}
-        mode="time"
-        is24Hour={true}
-        style={{ marginTop: 5, marginBottom: 10 }}
-        display="default"
-        onChange={(event, selectedTime) => {
-          // setShowTimePicker(false);
-          if (selectedTime) {
-            const formattedTime = format(selectedTime, 'HH:mm');
-            setNotificationTime(formattedTime);
-          }
-        }}
+      )}
+      <CustomButton
+        title="Save Preferences"
+        bgVariant="plant"
+        onPress={saveNotificationPreferences}
+        className="py-3 rounded-xl"
       />
-    )}
-    <CustomButton
-      title="Save Preferences"
-      bgVariant="plant"
-      onPress={saveNotificationPreferences}
-      className="py-3 rounded-xl"
-    />
-  </MotiView>
-), [notificationsEnabled, notificationTime, showTimePicker]);
+    </MotiView>
+  ), [notificationsEnabled, notificationTime, showTimePicker, saveNotificationPreferences]);
 
   const renderExportReport = useCallback(() => (
     <CustomButton
@@ -1334,7 +1344,7 @@ const LayoutDetail = () => {
   }
 
   return (
-    <LinearGradient colors={['#D1FAE5', '#F0FFF4']} className="flex-1" style={{ paddingTop: insets.top }}>
+<LinearGradient colors={['#D1FAE5', '#F0FFF4']} className="flex-1" style={{ paddingTop: insets.top }}>
       <FlatList
         data={sections}
         keyExtractor={(item) => item.id}

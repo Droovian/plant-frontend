@@ -24,6 +24,7 @@ const AlertsComponent = () => {
   useEffect(() => {
     const fetchAlerts = async () => {
       try {
+        console.log('Fetching alerts for user ID:', id);
         const response = await fetch(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/notification?id=${id}`);
         const data = await response.json();
         setAlerts(data);
