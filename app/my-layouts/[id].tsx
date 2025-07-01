@@ -1,30 +1,55 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  View, Text, Alert, Dimensions, ScrollView, Image, 
-  TouchableOpacity, Animated, ActivityIndicator 
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  View,
+  Text,
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  TouchableOpacity,
+  Animated,
+  ActivityIndicator,
+  TextInput,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import { useUser } from '@clerk/clerk-expo';
 import axios from 'axios';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { plants } from '@/assets/data/plant';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import { Calendar } from 'react-native-calendars';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import useWeather from '@/hooks/useWeather';
 import WeatherBanner from '@/components/WeatherBanner';
 import CustomButton from '@/components/Button';
-import { LinearGradient } from 'expo-linear-gradient';
-import { compatibility } from '@/assets/data/plant';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { plants, compatibility } from '@/assets/data/plant';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { format, parse } from 'date-fns';
+
 const BASE_CELL_SIZE = Dimensions.get('window').width < 375 ? 40 : 48;
+
+interface Plant {
+  name: string;
+  image: any;
+  sunlight: string;
+  optimal_soil_type: string[];
+  fertilizerNeeds?: string;
+  pestSusceptibility?: string[];
+  daysToHarvest?: number;
+}
 
 interface LayoutData {
   _id: string;
+  name?: string;
   grid: { rows: { plantName: string }[][] };
   width: number;
   height: number;
   createdAt: string;
+  plantingDate?: string;
 }
 
 interface WateringSchedule {
@@ -32,9 +57,31 @@ interface WateringSchedule {
 }
 
 interface WateringHistory {
-  layoutId: string | string[]; // Add layoutId if needed.
+  layoutId: string | string[];
   plantName: string;
-  wateringDates: string[]; // Change 'dates' to 'wateringDates' and make it an array of strings.
+  wateringDates: string[];
+}
+
+interface Task {
+  _id: string;
+  description: string;
+  completed: boolean;
+  layoutId: string;
+  userId: string;
+  createdAt: string;
+}
+
+interface HarvestHistory {
+  id: string;
+  layoutId: string;
+  userId: string;
+  plantName: string;
+  date: string;
+}
+
+interface Section {
+  id: string;
+  render: () => JSX.Element | null;
 }
 
 const LayoutDetail = () => {
@@ -43,57 +90,79 @@ const LayoutDetail = () => {
   const { user } = useUser();
   const userId = user?.id;
   const insets = useSafeAreaInsets();
-  
   const [layout, setLayout] = useState<LayoutData | null>(null);
   const [loading, setLoading] = useState(true);
   const [wateringSchedule, setWateringSchedule] = useState<WateringSchedule>({});
   const [wateringInsights, setWateringInsights] = useState<string[]>([]);
   const [wateringHistory, setWateringHistory] = useState<WateringHistory[]>([]);
+  const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
   const [waterLevels, setWaterLevels] = useState<{ [plantName: string]: Animated.Value }>({});
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [newTask, setNewTask] = useState('');
+  const [harvestHistory, setHarvestHistory] = useState<HarvestHistory[]>([]);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [notificationTime, setNotificationTime] = useState('08:00');
   const { weather, address, error } = useWeather();
-  
-  const weatherData = weather ? {
-    currentTemp: weather.current?.temp_c,
-    currentCondition: weather.current?.condition?.text,
-    dewPoint: weather?.dewpoint_c,
-    humidity: weather.current?.humidity,
-    windSpeed: weather.current?.wind_kph,
-    uvIndex: weather.current?.uv,
-    gust: weather?.gust_kph,
-    heatIndex: weather?.heatindex_c,
-    pressure: weather?.pressure_in,
-    feelsLike: weather?.feelslike_c,
-    forecast: weather.forecast?.forecastday?.map((day) => ({
-      date: day.date,
-      maxTemp: day.day.maxtemp_c,
-      minTemp: day.day.mintemp_c,
-      condition: day.day.condition.text,
-      totalPrecip: day.day.totalprecip_in,
-      willRain: day.day.daily_will_it_rain,
-      chanceOfRain: day.day.daily_chance_of_rain,
-    })),
-  } : null;
 
+  const weatherData = useMemo(() => {
+    if (!weather) return null;
+    return {
+      currentTemp: weather.current?.temp_c,
+      currentCondition: weather.current?.condition?.text,
+      dewPoint: weather?.dewpoint_c,
+      humidity: weather.current?.humidity,
+      windSpeed: weather.current?.wind_kph,
+      uvIndex: weather.current?.uv,
+      gust: weather?.gust_kph,
+      heatIndex: weather?.heatindex_c,
+      pressure: weather?.pressure_in,
+      feelsLike: weather?.feelslike_c,
+      forecast: weather.forecast?.forecastday?.map((day) => ({
+        date: day.date,
+        maxTemp: day.day.maxtemp_c,
+        minTemp: day.day.mintemp_c,
+        condition: day.day.condition.text,
+        totalPrecip: day.day.totalprecip_in,
+        willRain: day.day.daily_will_it_rain,
+        chanceOfRain: day.day.daily_chance_of_rain,
+      })),
+    };
+  }, [weather]);
+
+  // Request notification permissions
+  useEffect(() => {
+    const requestPermissions = async () => {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Notifications are required for reminders.');
+        setNotificationsEnabled(false);
+      }
+    };
+    requestPermissions();
+  }, []);
+
+  const getTimeAsDate = () => {
+    if (!notificationTime || !/^\d{2}:\d{2}$/.test(notificationTime)) {
+      return new Date(new Date().setHours(8, 0, 0, 0));
+    }
+    return parse(notificationTime, 'HH:mm', new Date());
+  };
+
+  // Fetch data
   useEffect(() => {
     if (id && userId) {
       fetchLayout();
       fetchWateringHistory();
+      fetchTasks();
+      fetchHarvestHistory();
+      fetchNotificationPreferences();
     }
   }, [id, userId]);
 
-  useEffect(() => {
-    if (layout) {
-      initializeWaterLevels();
-      generateWateringCalendar();
-    }
-  }, [layout, wateringHistory]);
-
-  const fetchLayout = async () => {
+  const fetchLayout = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get(
-        `${process.env.EXPO_PUBLIC_NODE_KEY}/api/layout/${id}`
-      );
+      const response = await axios.get(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/layout/${id}`);
       setLayout(response.data);
     } catch (error) {
       console.error('Error fetching layout:', error);
@@ -101,47 +170,435 @@ const LayoutDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  const fetchWateringHistory = async () => {
+  const fetchWateringHistory = useCallback(async () => {
     try {
       const response = await axios.get(
         `${process.env.EXPO_PUBLIC_NODE_KEY}/api/watering-history/layout/${id}`
       );
       setWateringHistory(response.data);
-      generateWateringCalendar(); // Regenerate calendar after fetching
     } catch (error) {
       console.error('Error fetching watering history:', error);
+      Alert.alert('Error', 'Failed to fetch watering history.');
     }
-  };
+  }, [id]);
 
-  const initializeWaterLevels = () => {
-    if (!layout) return;
-    
-    const levels: { [plantName: string]: Animated.Value } = {};
-    const plantList: { [key: string]: boolean } = {};
-    
-    layout.grid.rows.forEach((row) => {
-      row.forEach((cell) => {
-        if (cell.plantName && !plantList[cell.plantName]) {
-          plantList[cell.plantName] = true;
-          levels[cell.plantName] = new Animated.Value(100);
-        }
+  const fetchTasks = useCallback(async () => {
+  if (!user || !user.id) {
+    console.error('User or userId not available', { user });
+    Alert.alert('Error', 'User not authenticated.');
+    return;
+  }
+  try {
+    const response = await axios.get(
+      `${process.env.EXPO_PUBLIC_NODE_KEY}/api/tasks/layout/${id}?userId=${user.id}`
+    );
+    console.log('Fetched tasks:', response.data);
+    setTasks(response.data);
+  } catch (error) {
+    console.error('Error fetching tasks:', error);
+    if (axios.isAxiosError(error)) {
+      console.log('Axios error details:', {
+        status: error.response?.status,
+        data: error.response?.data,
       });
-    });
-    
-    setWaterLevels(levels);
-  };
+    }
+    Alert.alert('Error', 'Failed to fetch tasks.');
+  }
+}, [id, user]);
 
+
+
+  const fetchHarvestHistory = useCallback(async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.EXPO_PUBLIC_NODE_KEY}/api/harvest-history/layout/${id}`
+      );
+      setHarvestHistory(response.data);
+    } catch (error) {
+      console.error('Error fetching harvest history:', error);
+      Alert.alert('Error', 'Failed to fetch harvest history.');
+    }
+  }, [id]);
+
+    const fetchNotificationPreferences = useCallback(async () => {
+    if (!user || !user.id) {
+      console.error('User or userId not available');
+      setNotificationsEnabled(true); // Default value
+      setNotificationTime('08:00'); // Default value
+      return;
+    }
+    try {
+      console.log('Fetching preferences for userId:', userId);
+      const response = await axios.get(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/notification-preferences/${userId}`);
+      setNotificationsEnabled(response.data.notificationsEnabled);
+      setNotificationTime(response.data.notificationTime);
+    } catch (error) {
+      console.error('Error fetching notification preferences:', error);
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        setNotificationsEnabled(true);
+        setNotificationTime('08:00');
+      } else {
+        Alert.alert('Error', 'Failed to fetch notification preferences.');
+      }
+    }
+  }, [user]);
+
+  const getWateringInterval = useCallback((plantName: string) => {
+    switch (plantName) {
+      case 'Okra':
+      case 'Tomato':
+      case 'Pumpkin':
+      case 'Eggplant':
+      case 'Potato':
+      case 'Asparagus':
+      case 'Onion':
+      case 'Cowpea':
+      case 'Corn':
+        return 3;
+      case 'Chilli':
+      case 'Beet':
+      case 'Spinach':
+      case 'Cucumber':
+      case 'Lettuce':
+        return 2;
+      case 'Drumstick':
+      case 'Breadfruit':
+        return 7;
+      case 'Radish':
+        return 1;
+      default:
+        return 3;
+    }
+  }, []);
+
+  const scheduleNotification = useCallback(
+  async (title: string, body: string, date: Date) => {
+    if (!notificationsEnabled) return;
+    try {
+      const now = new Date();
+      let triggerDate = new Date(date);
+      // If the time is earlier today, schedule for tomorrow
+      if (triggerDate <= now) {
+        triggerDate.setDate(triggerDate.getDate() + 1);
+      }
+      const secondsUntilTrigger = Math.floor((triggerDate.getTime() - now.getTime()) / 1000);
+      console.log(`Scheduling notification: ${title} at ${triggerDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} (${secondsUntilTrigger} seconds from now)`);
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: secondsUntilTrigger,
+          repeats: false,
+        },
+      });
+    } catch (error) {
+      console.error('Error scheduling notification:', error);
+      Alert.alert('Error', 'Failed to schedule notification.');
+    }
+  },
+  [notificationsEnabled]
+)
+
+  const addTask = useCallback(async () => {
+    if (!newTask.trim()) {
+      Alert.alert('Error', 'Task description cannot be empty.');
+      return;
+    }
+    try {
+      const response = await axios.post(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/tasks`, {
+        layoutId: id,
+        userId,
+        description: newTask,
+      });
+      setTasks([...tasks, response.data]);
+      setNewTask('');
+      const [hours, minutes] = notificationTime.split(':').map(Number);
+      const notificationDate = new Date();
+      notificationDate.setHours(hours, minutes, 0, 0);
+      if (notificationDate < new Date()) {
+        notificationDate.setDate(notificationDate.getDate() + 1);
+      }
+      await scheduleNotification('New Task', `Task: ${newTask}`, notificationDate);
+    } catch (error) {
+      console.error('Error adding task:', error);
+      Alert.alert('Error', 'Failed to add task.');
+    }
+  }, [id, userId, newTask, tasks, notificationTime, scheduleNotification]);
+
+    const toggleTask = useCallback(
+    async (taskId: string, completed: boolean) => {
+      if (!user || !user.id) {
+        console.error('User or userId not available', { user });
+        Alert.alert('Error', 'User not authenticated.');
+        return;
+      }
+      try {
+        const response = await axios.put(
+          `${process.env.EXPO_PUBLIC_NODE_KEY}/api/tasks/${taskId}`,
+          {
+            userId: user.id,
+            completed: !completed,
+          }
+        );
+        setTasks(
+          tasks.map((task) => (task._id === taskId ? response.data : task))
+        );
+        console.log('Toggled task:', response.data);
+      } catch (error) {
+        console.error('Error toggling task:', error);
+        if (axios.isAxiosError(error)) {
+          console.log('Axios error details:', {
+            status: error.response?.status,
+            data: error.response?.data,
+          });
+        }
+        Alert.alert('Error', 'Failed to update task.');
+      }
+    },
+    [tasks, user]
+  );
+
+    const deleteTask = useCallback(
+    async (taskId: string) => {
+      if (!user || !user.id) {
+        console.error('User or userId not available', { user });
+        Alert.alert('Error', 'User not authenticated.');
+        return;
+      }
+      Alert.alert('Confirm', 'Are you sure you want to delete this task?', [
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await axios.delete(
+                `${process.env.EXPO_PUBLIC_NODE_KEY}/api/tasks/${taskId}`,
+                {
+                  data: { userId: user.id }, // Send userId in body
+                }
+              );
+              setTasks(tasks.filter((task) => task._id !== taskId));
+              console.log('Deleted task:', taskId);
+            } catch (error) {
+              console.error('Error deleting task:', error);
+              if (axios.isAxiosError(error)) {
+                console.log('Axios error details:', {
+                  status: error.response?.status,
+                  data: error.response?.data,
+                });
+              }
+              Alert.alert('Error', 'Failed to delete task.');
+            }
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    },
+    [tasks, user]
+  );
+
+  const logHarvest = useCallback(
+    async (plantName: string) => {
+      const plant = plants.find((p) => p.name === plantName);
+      if (!plant) {
+        Alert.alert('Error', 'Plant not found.');
+        return;
+      }
+      const history = wateringHistory.find((h) => h.plantName === plantName);
+      const plantingDate = history?.wateringDates[0];
+      const daysSincePlanted = plantingDate
+        ? Math.floor((Date.now() - new Date(plantingDate).getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+      const daysToHarvest = plant.daysToHarvest || 60;
+      if (daysSincePlanted < daysToHarvest * 0.9) {
+        Alert.alert(
+          'Warning',
+          `${plantName} may not be ready for harvest yet. Expected in ~${daysToHarvest - daysSincePlanted} days.`,
+          [
+            {
+              text: 'Log Anyway',
+              onPress: async () => {
+                try {
+                  const response = await axios.post(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/harvest-history`, {
+                    layoutId: id,
+                    userId,
+                    plantName,
+                    date: new Date().toISOString().split('T')[0],
+                  });
+                  setHarvestHistory([...harvestHistory, response.data]);
+                  Alert.alert('Success', `${plantName} harvest logged!`);
+                } catch (error) {
+                  console.error('Error logging harvest:', error);
+                  Alert.alert('Error', 'Failed to log harvest.');
+                }
+              },
+            },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
+        return;
+      }
+      try {
+        const response = await axios.post(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/harvest-history`, {
+          layoutId: id,
+          userId,
+          plantName,
+          date: new Date().toISOString().split('T')[0],
+        });
+        setHarvestHistory([...harvestHistory, response.data]);
+        Alert.alert('Success', `${plantName} harvest logged!`);
+      } catch (error) {
+        console.error('Error logging harvest:', error);
+        Alert.alert('Error', 'Failed to log harvest.');
+      }
+    },
+    [id, userId, harvestHistory, wateringHistory]
+  );
+
+  const deleteHarvest = useCallback(
+    async (harvestId: string) => {
+      Alert.alert('Confirm', 'Are you sure you want to delete this harvest record?', [
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await axios.delete(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/harvest-history/${harvestId}`);
+              setHarvestHistory(harvestHistory.filter((h) => h.id !== harvestId));
+            } catch (error) {
+              console.error('Error deleting harvest:', error);
+              Alert.alert('Error', 'Failed to delete harvest record.');
+            }
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    },
+    [harvestHistory]
+  );
+
+  const saveNotificationPreferences = useCallback(async () => {
+    if (!user || !user.id) {
+      console.error('User or userId not available', { user });
+      Alert.alert('Error', 'User not authenticated.');
+      return;
+    }
+    if (!notificationTime || !/^\d{2}:\d{2}$/.test(notificationTime)) {
+      Alert.alert('Error', 'Please select a valid time.');
+      return;
+    }
+    try {
+      console.log('Saving preferences for userId:', user.id);
+      const response = await axios.post(
+        `${process.env.EXPO_PUBLIC_NODE_KEY}/api/notification-preferences/${user.id}`,
+        {
+          notificationsEnabled,
+          notificationTime,
+        }
+      );
+      console.log('Preferences saved:', response.data);
+      Alert.alert('Success', 'Notification preferences saved.');
+    } catch (error) {
+      console.error('Error saving notification preferences:', error);
+      if (axios.isAxiosError(error)) {
+        console.log('Axios error details:', {
+          status: error.response?.status,
+          data: error.response?.data,
+        });
+      }
+      Alert.alert('Error', 'Failed to save notification preferences.');
+    }
+  }, [user, notificationsEnabled, notificationTime]);
+
+  const updateWateringHistory = useCallback(
+    async (plantName: string) => {
+      const today = new Date().toISOString().split('T')[0];
+      try {
+        await axios.post(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/watering-history`, {
+          layoutId: id,
+          plantName,
+          date: today,
+        });
+        fetchWateringHistory();
+      } catch (error) {
+        console.error('Error logging watering:', error);
+        Alert.alert('Error', 'Failed to log watering.');
+      }
+    },
+    [id, fetchWateringHistory]
+  );
+
+  const logWatering = useCallback(
+    (plantName: string) => {
+      if (waterLevels[plantName]) {
+        Animated.sequence([
+          Animated.timing(waterLevels[plantName], {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: false,
+          }),
+          Animated.timing(waterLevels[plantName], {
+            toValue: 100,
+            duration: 800,
+            useNativeDriver: false,
+          }),
+        ]).start(async () => {
+          await updateWateringHistory(plantName);
+          const interval = getWateringInterval(plantName);
+          const nextWateringDate = new Date();
+          nextWateringDate.setDate(nextWateringDate.getDate() + interval);
+          const [hours, minutes] = notificationTime.split(':').map(Number);
+          nextWateringDate.setHours(hours, minutes, 0, 0);
+          await scheduleNotification(
+            `Water ${plantName}`,
+            `Time to water your ${plantName}!`,
+            nextWateringDate
+          );
+          const plant = plants.find((p) => p.name === plantName);
+          if (plant?.daysToHarvest) {
+            const harvestDate = new Date();
+            harvestDate.setDate(harvestDate.getDate() + plant.daysToHarvest);
+            harvestDate.setHours(hours, minutes, 0, 0);
+            await scheduleNotification(
+              `Harvest ${plantName}`,
+              `Your ${plantName} may be ready to harvest!`,
+              harvestDate
+            );
+          }
+        });
+      }
+    },
+    [waterLevels, updateWateringHistory, notificationTime, getWateringInterval, scheduleNotification]
+  );
+
+  // Initialize water levels
+  useEffect(() => {
+    if (layout) {
+      const levels: { [plantName: string]: Animated.Value } = {};
+      const plantList: { [key: string]: boolean } = {};
+      layout.grid.rows.forEach((row) => {
+        row.forEach((cell) => {
+          if (cell.plantName && !plantList[cell.plantName]) {
+            plantList[cell.plantName] = true;
+            levels[cell.plantName] = new Animated.Value(100);
+          }
+        });
+      });
+      setWaterLevels(levels);
+    }
+  }, [layout]);
 
   const generateColorMap = useCallback(() => {
     if (!layout) return {};
-  
     const colors = ['#3b82f6', '#16a34a', '#f97316', '#d946ef', '#2dd4bf', '#facc15'];
-    const colorMap: { [key: string]: string } = {}; 
+    const colorMap: { [key: string]: string } = {};
     const plantList: { [key: string]: boolean } = {};
     let colorIndex = 0;
-  
     layout.grid.rows.forEach((row) => {
       row.forEach((cell) => {
         if (cell.plantName && !plantList[cell.plantName]) {
@@ -151,21 +608,61 @@ const LayoutDetail = () => {
         }
       });
     });
-  
     return colorMap;
   }, [layout]);
 
-  const generateWateringCalendar = useCallback(() => {
-    if (!layout || !wateringHistory.length) return;
-  
+  const getGrowthStage = useCallback((plantName: string, days: number) => {
+    const plant = plants.find((v) => v.name === plantName);
+    if (!plant) return 'Unknown';
+    const stages = {
+      Seedling: 14,
+      Vegetative: 30,
+      Flowering: 50,
+      Fruiting: Infinity,
+    };
+    if (days <= stages.Seedling) return 'Seedling';
+    if (days <= stages.Vegetative) return 'Vegetative';
+    if (days <= stages.Flowering) return 'Flowering';
+    return 'Fruiting';
+  }, []);
+
+  const getBorderStyle = useCallback(
+    (row: number, col: number, plantName: string) => {
+      if (!plantName || !compatibility[0][plantName] || !layout) return { isCompanion: false, shouldAvoid: false };
+      const compInfo = compatibility[0][plantName] || { companions: [], avoid: [] };
+      let isCompanion = false;
+      let shouldAvoid = false;
+      const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      layout.grid.rows.forEach((r, ri) => {
+        r.forEach((c, ci) => {
+          if (directions.some(([dr, dc]) => ri === row + dr && ci === col + dc) && c.plantName) {
+            if (compInfo.companions?.includes(c.plantName)) isCompanion = true;
+            if (compInfo.avoid?.includes(c.plantName)) shouldAvoid = true;
+          }
+        });
+      });
+      return { isCompanion, shouldAvoid };
+    },
+    [layout]
+  );
+
+  const showTooltip = useCallback((rowIndex: number, colIndex: number, message: string) => {
+    Alert.alert('Plant Info', message);
+  }, []);
+
+  const MemoizedColorMap = useMemo(() => generateColorMap(), [generateColorMap]);
+
+  useEffect(() => {
+    if (!layout || !wateringHistory.length) {
+      setWateringSchedule({});
+      return;
+    }
     const schedule: WateringSchedule = {};
     const today = new Date();
     const futureDate = new Date(today);
     futureDate.setDate(today.getDate() + 30);
-  
-    const colorMap = generateColorMap();
-  
-    // Mark past watering dates
+    const colorMap = MemoizedColorMap;
+
     wateringHistory.forEach((item) => {
       item.wateringDates.forEach((date) => {
         if (!schedule[date]) {
@@ -174,32 +671,25 @@ const LayoutDetail = () => {
         schedule[date].dots.push({ color: colorMap[item.plantName] });
       });
     });
-  
-    // Calculate future watering dates
+
     const plantList: { [key: string]: boolean } = {};
     layout.grid.rows.forEach((row) => {
       row.forEach((cell) => {
-        if (cell.plantName) {
-          plantList[cell.plantName] = true;
-        }
+        if (cell.plantName) plantList[cell.plantName] = true;
       });
     });
-  
+
     Object.keys(plantList).forEach((plantName) => {
       const plantHistory = wateringHistory.find((h) => h.plantName === plantName);
-  
       if (!plantHistory || !plantHistory.wateringDates.length) return;
-  
       const sortedDates = [...plantHistory.wateringDates].sort();
       const lastWateredDate = new Date(sortedDates[sortedDates.length - 1]);
       let waterInterval = getWateringInterval(plantName);
-  
       let nextWateringDate = new Date(lastWateredDate);
       nextWateringDate.setDate(nextWateringDate.getDate() + waterInterval);
-  
+
       while (nextWateringDate <= futureDate) {
         const dateString = nextWateringDate.toISOString().split('T')[0];
-  
         if (!schedule[dateString]) {
           schedule[dateString] = { marked: true, dots: [] };
         }
@@ -207,59 +697,57 @@ const LayoutDetail = () => {
         nextWateringDate.setDate(nextWateringDate.getDate() + waterInterval);
       }
     });
-  
-    // Mark today
+
     const todayString = today.toISOString().split('T')[0];
     if (!schedule[todayString]) {
       schedule[todayString] = { marked: true, dots: [] };
     }
-    schedule[todayString].dots.push({ color: '#000000' }); // Red for today
-  
-    setWateringSchedule(schedule);
-  }, [wateringHistory, layout, generateColorMap]);
+    schedule[todayString].dots.push({ color: '#000000' });
 
-  const generateWateringInsights = () => {
+    if (JSON.stringify(schedule) !== JSON.stringify(wateringSchedule)) {
+      setWateringSchedule(schedule);
+    }
+  }, [layout, wateringHistory, getWateringInterval, MemoizedColorMap]);
+
+  const generateWateringInsights = useCallback(() => {
     if (!layout || !weatherData || !weatherData.forecast) {
       setWateringInsights(['No insights available due to missing data.']);
       return;
     }
-  
     const recommendations: string[] = [];
     const today = new Date().toISOString().split('T')[0];
     const todayForecast = weatherData.forecast?.find((day) => day.date === today);
-    
-    // Plants that need watering today
-    const plantsNeedingWater: string[] = [];
-    
-    // Check which plants need water today based on schedule
-    const todaySchedule = wateringSchedule[today];
-    if (todaySchedule && todaySchedule.marked) {
-      const plantList: { [key: string]: boolean } = {};
-      layout.grid.rows.forEach((row) => {
-        row.forEach((cell) => {
-          if (cell.plantName) {
-            plantList[cell.plantName] = true;
+    const plantList: { [key: string]: boolean } = {};
+    layout.grid.rows.forEach((row, rowIndex) => {
+      row.forEach((cell, colIndex) => {
+        if (cell.plantName) {
+          plantList[cell.plantName] = true;
+          const { isCompanion, shouldAvoid } = getBorderStyle(rowIndex, colIndex, cell.plantName);
+          if (isCompanion) {
+            recommendations.push(`Great pairing: ${cell.plantName} benefits from nearby companions. 🌿`);
           }
-        });
-      });
-      
-      Object.keys(plantList).forEach(plantName => {
-        // Check if this plant has a watering date today
-        const needsWater = Object.keys(wateringSchedule).includes(today) &&
-                         wateringSchedule[today].marked;
-        
-        if (needsWater) {
-          plantsNeedingWater.push(plantName);
+          if (shouldAvoid) {
+            recommendations.push(`Warning: ${cell.plantName} is near incompatible plants, consider relocating. ⚠️`);
+          }
         }
       });
+    });
+
+    const plantsNeedingWater: string[] = [];
+    const todaySchedule = wateringSchedule[today];
+    const colorMap = MemoizedColorMap;
+
+    if (todaySchedule && todaySchedule.marked) {
+      Object.keys(plantList).forEach((plantName) => {
+        const needsWater = todaySchedule.dots.some((dot) => dot.color === colorMap[plantName]);
+        if (needsWater) plantsNeedingWater.push(plantName);
+      });
     }
-  
-    // Generate insights for plants needing water
+
     if (plantsNeedingWater.length > 0) {
-      plantsNeedingWater.forEach(plantName => {
+      plantsNeedingWater.forEach((plantName) => {
         const plant = plants.find((v) => v.name === plantName);
         if (!plant) return;
-        
         if (todayForecast && todayForecast.maxTemp > 32) {
           recommendations.push(
             `${plant.name} needs watering today. High temperature (${todayForecast.maxTemp}°C) requires extra moisture. 🌞`
@@ -275,12 +763,16 @@ const LayoutDetail = () => {
         } else {
           recommendations.push(`${plant.name} needs watering today. 🌱`);
         }
+        if (plant.pestSusceptibility && weatherData.humidity > 80) {
+          recommendations.push(
+            `${plant.name} at risk of ${plant.pestSusceptibility.join(', ')} due to high humidity. Inspect regularly. 🐞`
+          );
+        }
       });
     } else {
-      recommendations.push("No plants need watering today according to the schedule. 👍");
+      recommendations.push('No plants need watering today according to the schedule. 👍');
     }
-  
-    // General Garden Recommendations based on weather
+
     if (todayForecast && todayForecast.maxTemp > 35) {
       recommendations.push(
         `Garden Alert: Extreme heat (${todayForecast.maxTemp}°C) today. Water all plants deeply in the early morning or evening. 🔥`
@@ -294,349 +786,578 @@ const LayoutDetail = () => {
         `Garden Caution: High UV index (${weatherData.uvIndex}) today. Water early morning or late evening to prevent leaf burn. ☀️`
       );
     }
-  
     setWateringInsights(recommendations);
-  };
+  }, [layout, weatherData, wateringSchedule, getBorderStyle, MemoizedColorMap]);
 
-  const getWateringInterval = (plantName: string) => {
-    switch (plantName) {
-        case 'Okra': return 3;        // Moderate water needs
-        case 'Tomato': return 3;      // Consistent moisture, every 3 days
-        case 'Chilli': return 2;      // Frequent watering, every 2 days
-        case 'Drumstick': return 7;   // Drought-tolerant once established, weekly
-        case 'Pumpkin': return 3;     // High water needs due to large leaves
-        case 'Breadfruit': return 7;  // Tree, weekly once established
-        case 'Radish': return 1;      // Shallow roots, daily watering
-        case 'Eggplant': return 3;    // Moderate water needs
-        case 'Potato': return 3;      // Consistent moisture for tubers
-        case 'Asparagus': return 3;   // Moderate water needs
-        case 'Beet': return 2;        // Frequent watering for root development
-        case 'Spinach': return 2;     // Cool-season, frequent shallow watering
-        case 'Corn': return 3;        // High water needs during growth
-        case 'Cucumber': return 2;    // High water needs, especially when fruiting
-        case 'Onion': return 3;       // Moderate water needs
-        case 'Cowpea': return 3;      // Moderate, drought-tolerant once established
-        case 'Lettuce': return 2;     // Frequent shallow watering for leaves
-        default: return 3;            // Default to moderate watering
+  const exportLayoutReport = useCallback(async () => {
+    if (!layout) return;
+    const plantList: string[] = [];
+    layout.grid.rows.forEach((row) =>
+      row.forEach((cell) => {
+        if (cell.plantName && !plantList.includes(cell.plantName)) plantList.push(cell.plantName);
+      })
+    );
+    const html = `
+      <h1>${layout.name || 'My Garden Layout'}</h1>
+      <p>Created: ${new Date(layout.createdAt).toLocaleDateString()}</p>
+      <h2>Plants</h2>
+      <ul>${plantList.map((p) => `<li>${p}</li>`).join('')}</ul>
+      <h2>Watering Schedule</h2>
+      <ul>${Object.keys(wateringSchedule)
+        .map(
+          (date) =>
+            `<li>${date}: ${wateringSchedule[date].dots
+              .map((dot) => Object.keys(MemoizedColorMap).find((key) => MemoizedColorMap[key] === dot.color))
+              .join(', ')}</li>`
+        )
+        .join('')}</ul>
+      <h2>Tasks</h2>
+      <ul>${tasks.map((task) => `<li>${task.description} (${task.completed ? 'Completed' : 'Pending'})</li>`).join('')}</ul>
+      <h2>Harvest History</h2>
+      <ul>${harvestHistory.map((harvest) => `<li>${harvest.plantName} on ${new Date(harvest.date).toLocaleDateString()}</li>`).join('')}</ul>
+      <h2>Insights</h2>
+      <ul>${wateringInsights.map((insight) => `<li>${insight}</li>`).join('')}</ul>
+    `;
+    try {
+      const { uri } = await Print.printToFileAsync({ html });
+      await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Share Garden Report' });
+    } catch (error) {
+      console.error('Error generating report:', error);
+      Alert.alert('Error', 'Failed to generate report.');
     }
-};
+  }, [layout, wateringSchedule, wateringInsights, MemoizedColorMap, tasks, harvestHistory]);
 
-  const getBorderStyle = (row: number, col: number, plantName: string) => {
-    if (!plantName) return { isCompanion: false, shouldAvoid: false };
-    const compInfo = compatibility[0][plantName] || { companions: [], avoid: [] };
-    let isCompanion = false;
-    let shouldAvoid = false;
-    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-    layout?.grid.rows.forEach((r, ri) => {
-      r.forEach((c, ci) => {
-        if (directions.some(([dr, dc]) => ri === row + dr && ci === col + dc) && c.plantName) {
-          if (compInfo.companions && compInfo.companions.includes(c.plantName)) isCompanion = true;
-          if (compInfo.avoid && compInfo.avoid.includes(c.plantName)) shouldAvoid = true;
+  const renderGrid = useCallback(() => {
+    if (!layout) return null;
+    const { grid, width, height } = layout;
+    const maxCells = 20;
+    const cellSize = Math.min(
+      BASE_CELL_SIZE,
+      (Dimensions.get('window').width - 32) / Math.min(width, maxCells),
+      (Dimensions.get('window').height / 4) / Math.min(height, maxCells)
+    );
+
+    return (
+      <MotiView
+        from={{ opacity: 0, translateY: 20 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'spring', delay: 300 }}
+      >
+        {grid.rows.map((row, rowIndex) => (
+          <View key={rowIndex} className="flex-row justify-center">
+            {row.map((cell, colIndex) => {
+              const plant = plants.find((v) => v.name === cell.plantName);
+              const { isCompanion, shouldAvoid } = getBorderStyle(rowIndex, colIndex, cell.plantName);
+              return (
+                <TouchableOpacity
+                  key={colIndex}
+                  onPress={() => showTooltip(rowIndex, colIndex, plant?.name || 'Empty')}
+                  className={`border-2 ${
+                    isCompanion ? 'border-green-400' : shouldAvoid ? 'border-red-400' : 'border-gray-300'
+                  } bg-white justify-center items-center rounded-md m-0.5`}
+                  style={{ width: cellSize, height: cellSize }}
+                  activeOpacity={0.8}
+                >
+                  {cell.plantName && plant?.image && (
+                    <Image source={plant.image} className="w-4/5 h-4/5" resizeMode="contain" />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
+      </MotiView>
+    );
+  }, [layout, getBorderStyle, showTooltip]);
+
+  const renderColorLegend = useCallback(() => {
+    const colorMap = MemoizedColorMap;
+    return (
+      <View className="flex-row flex-wrap justify-start">
+        {Object.entries(colorMap).map(([plantName, color]) => (
+          <View key={plantName} className="flex-row items-center mr-3 mb-2">
+            <View className="w-3 h-3 rounded-full mr-1" style={{ backgroundColor: color }} />
+            <Text className="text-xs text-gray-600">{plantName}</Text>
+          </View>
+        ))}
+      </View>
+    );
+  }, [MemoizedColorMap]);
+
+  const renderPlantCards = useCallback(() => {
+    if (!layout) return null;
+    const plantListArray: Plant[] = [];
+    const seenPlantNames: { [key: string]: boolean } = {};
+
+    layout.grid.rows.forEach((row) => {
+      row.forEach((cell) => {
+        if (cell.plantName && !seenPlantNames[cell.plantName]) {
+          const plant = plants.find((v) => v.name === cell.plantName);
+          if (plant) {
+            plantListArray.push(plant);
+            seenPlantNames[cell.plantName] = true;
+          }
         }
       });
     });
-    return { isCompanion, shouldAvoid };
-  };
 
-  const showTooltip = (rowIndex: number, colIndex: number, message: string) => {
-    // Implement tooltip logic (e.g., using a state and absolute positioning)
-    Alert.alert('Plant Info', message); // Placeholder
-  };
+    return (
+      <FlatList
+        data={plantListArray}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(item) => item.name}
+        contentContainerStyle={{ paddingRight: 16 }}
+        renderItem={({ item: plant, index }) => {
+          const history = wateringHistory.find((h) => h.plantName === plant.name);
+          const plantingDate = history?.wateringDates[0];
+          const daysSincePlanted = plantingDate
+            ? Math.floor((Date.now() - new Date(plantingDate).getTime()) / (1000 * 60 * 60 * 24))
+            : 0;
+          const growthStage = getGrowthStage(plant.name, daysSincePlanted);
+          const daysToHarvest = plant.daysToHarvest || 60;
+          const isHarvestReady = daysSincePlanted >= daysToHarvest * 0.9;
 
-  const renderGrid = useCallback(() => {
-  if (!layout) return null;
-  const { grid, width, height } = layout;
-  const maxCells = 20;
-  const cellSize = Math.min(
-    BASE_CELL_SIZE,
-    (Dimensions.get('window').width - 32) / Math.min(width, maxCells),
-    (Dimensions.get('window').height / 4) / Math.min(height, maxCells)
-  );
+          return (
+            <MotiView
+              key={plant.name}
+              from={{ opacity: 0, translateY: 20 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ type: 'spring', delay: 100 * (index + 6) }}
+              className="bg-white p-4 rounded-2xl mb-4"
+              style={{ width: Dimensions.get('window').width * 0.8, marginRight: 16 }}
+            >
+              <View className="flex-row items-center mb-3">
+                <Image source={plant.image} className="w-16 h-16 rounded-full mr-3" resizeMode="contain" />
+                <View className="flex-1">
+                  <Text className="text-lg font-bold text-green-800">{plant.name}</Text>
+                  <Text className="text-sm text-gray-500">
+                    Stage: {growthStage} {growthStage === 'Seedling' ? '🌱' : growthStage === 'Flowering' ? '🌸' : '🍅'}
+                  </Text>
+                  <Text className={`text-sm ${isHarvestReady ? 'text-green-600' : 'text-gray-600'}`}>
+                    {isHarvestReady
+                      ? 'Ready to harvest!'
+                      : `Harvest in ~${Math.max(0, daysToHarvest - daysSincePlanted)} days`}
+                  </Text>
+                </View>
+              </View>
+              <View className="flex-row justify-between mb-2">
+                <Text className="text-sm text-gray-600">
+                  Water every {getWateringInterval(plant.name)} days
+                </Text>
+                {plant.daysToHarvest && plantingDate && (
+                  <Text className="text-sm text-gray-600">
+                    Expected Harvest:{' '}
+                    {new Date(
+                      new Date(plantingDate).setDate(new Date(plantingDate).getDate() + daysToHarvest)
+                    ).toLocaleDateString()}
+                  </Text>
+                )}
+              </View>
+              <View className="bg-gray-100 rounded-full h-3 overflow-hidden mb-3">
+                <Animated.View
+                  className="bg-blue-400 h-3 rounded-full"
+                  style={{
+                    width: waterLevels[plant.name]?.interpolate({
+                      inputRange: [0, 100],
+                      outputRange: ['0%', '100%'],
+                    }),
+                  }}
+                />
+              </View>
+              <View className="flex-row justify-between">
+                <CustomButton
+                  title="Log Watering"
+                  bgVariant="plant"
+                  onPress={() => logWatering(plant.name)}
+                  className="flex-1 mr-2 py-2 rounded-lg"
+                />
+                <CustomButton
+                  title="Log Harvest"
+                  bgVariant={isHarvestReady ? 'secondary' : 'danger'}
+                  onPress={() => logHarvest(plant.name)}
+                  className="flex-1 ml-2 py-2 rounded-lg"
+                  disabled={!isHarvestReady}
+                />
+              </View>
+            </MotiView>
+          );
+        }}
+      />
+    );
+  }, [layout, wateringHistory, getWateringInterval, getGrowthStage, waterLevels, logWatering, logHarvest]);
 
-  return (
+  const renderMotivationalBanner = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, translateY: -20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 50 }}
+      className="my-4 bg-green-100 p-4 rounded-lg"
+    >
+      <Text className="text-sm text-green-800 italic">
+        With every seed sown and every plant nurtured, you pour your heart and soul into your garden. Your passion
+        shines in every vibrant bloom!
+      </Text>
+    </MotiView>
+  ), []);
+
+  const renderHeader = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, translateY: -20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 100 }}
+      className="my-4"
+    >
+      <Text className="mx-auto text-3xl font-bold text-green-800">{layout?.name || 'My Garden Layout'}</Text>
+      <Text className="mx-auto text-sm text-gray-500 font-bold mt-2">
+        Created: {layout?.createdAt ? new Date(layout.createdAt).toLocaleDateString() : 'N/A'}
+      </Text>
+    </MotiView>
+  ), [layout]);
+
+  const renderWeather = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ type: 'spring', delay: 200 }}
+      className="my-4"
+    >
+      {weather && address ? (
+        <WeatherBanner
+          weather={weather}
+          address={address}
+          style={{
+            backgroundColor: '#E6F3FA',
+            borderRadius: 12,
+            padding: 16,
+          }}
+        />
+      ) : error ? (
+        <Text className="text-red-500 text-center">Weather data unavailable</Text>
+      ) : (
+        <View className="h-24 justify-center items-center bg-gray-100 rounded-lg">
+          <ActivityIndicator size="small" color="#4CAF50" />
+          <Text className="text-gray-600 mt-2">Loading weather...</Text>
+        </View>
+      )}
+    </MotiView>
+  ), [weather, address, error]);
+
+  const renderGardenLayout = useCallback(() => (
     <MotiView
       from={{ opacity: 0, translateY: 20 }}
       animate={{ opacity: 1, translateY: 0 }}
       transition={{ type: 'spring', delay: 300 }}
+      className="my-4 bg-white p-5 rounded-2xl shadow-md"
     >
-      {grid.rows.map((row, rowIndex) => (
-        <View key={rowIndex} className="flex-row justify-center">
-          {row.map((cell, colIndex) => {
-            const plant = plants.find((v) => v.name === cell.plantName);
-            const { isCompanion, shouldAvoid } = getBorderStyle(rowIndex, colIndex, cell.plantName);
-            return (
-              <TouchableOpacity
-                key={colIndex}
-                onPress={() => showTooltip(rowIndex, colIndex, plant?.name || 'Empty')}
-                className={`border-2 ${isCompanion ? 'border-green-400' : shouldAvoid ? 'border-red-400' : 'border-gray-300'} bg-white justify-center items-center rounded-md m-0.5`}
-                style={{ width: cellSize, height: cellSize }}
-                activeOpacity={0.8}
-              >
-                {cell.plantName && plant?.image && (
-                  <Image
-                    source={plant.image}
-                    className="w-4/5 h-4/5"
-                    resizeMode="contain"
-                  />
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      ))}
+      <Text className="text-xl font-bold text-green-800 mb-3">Garden Layout</Text>
+      {renderGrid()}
     </MotiView>
-  );
-}, [layout]);
+  ), [renderGrid]);
 
-  const logWatering = (plantName: string) => {
-    if (waterLevels[plantName]) {
-      Animated.sequence([
-        Animated.timing(waterLevels[plantName], {
-          toValue: 0,
-          duration: 500,
-          useNativeDriver: false,
-        }),
-        Animated.timing(waterLevels[plantName], {
-          toValue: 100,
-          duration: 800,
-          useNativeDriver: false,
-        }),
-      ]).start(() => {
-        updateWateringHistory(plantName);
-      });
-    }
-  };
-  
-  const updateWateringHistory = async (plantName: string) => {
-    const today = new Date().toISOString().split('T')[0];
-
-    try {
-      await axios.post(
-        `${process.env.EXPO_PUBLIC_NODE_KEY}/api/watering-history`,
-        {
-          layoutId: id,
-          plantName: plantName,
-          date: today,
-        }
-      );
-      fetchWateringHistory(); // Refresh data and calendar
-    } catch (error) {
-      console.error('Error logging watering:', error);
-      Alert.alert('Error', 'Failed to log watering.');
-    }
-  };
-
-  const renderPlantCards = useCallback(() => {
-    if (!layout) return null;
-    const plantList: { [key: string]: boolean } = {};
-    layout.grid.rows.forEach((row) => {
-      row.forEach((cell) => {
-        if (cell.plantName) {
-          plantList[cell.plantName] = true;
-        }
-      });
-    });
-
-    return Object.keys(plantList).map((plantName) => {
-      const plant = plants.find((v) => v.name === plantName);
-      if (!plant) return null;
-
-      return (
-        <MotiView
-          key={plantName}
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'spring', damping: 12 }}
-          className="bg-white rounded-lg p-4 m-2 shadow-md w-full max-w-sm"
-        >
-          <View className="flex-row items-center mb-2">
-            <Image source={plant.image} className="w-12 h-12 mr-3" resizeMode="contain" />
-            <Text className="text-lg font-semibold">{plant.name}</Text>
-          </View>
-          <Text className="text-sm text-gray-600">Water every {getWateringInterval(plant.name)} days.</Text>
-          <View className="mt-2 bg-gray-200 rounded-full h-4 overflow-hidden">
-            <Animated.View className="bg-blue-500 h-4 rounded-full" style={{ 
-              width: waterLevels[plantName]?.interpolate({ 
-                inputRange: [0, 100], 
-                outputRange: ['0%', '100%'] 
-              }) 
-            }} />
-          </View>
-          <TouchableOpacity 
-            onPress={() => logWatering(plantName)} 
-            className="mt-2 bg-blue-500 p-2 rounded-md items-center"
-          >
-            <Text className="text-white font-medium">Log Watering</Text>
-          </TouchableOpacity>
-        </MotiView>
-      );
-    });
-  }, [layout, waterLevels, wateringHistory]);
-
-
-  const renderColorLegend = useCallback(() => {
-  const colorMap = generateColorMap();
-  return (
-    <View className="flex-row flex-wrap justify-start">
-      {Object.entries(colorMap).map(([plantName, color]) => (
-        <View key={plantName} className="flex-row items-center mr-3 mb-2">
-          <View className="w-3 h-3 rounded-full mr-1" style={{ backgroundColor: color }} />
-          <Text className="text-xs text-gray-600">{plantName}</Text>
-        </View>
-      ))}
-    </View>
-  );
-}, [generateColorMap]);
-
-  return (
-    <LinearGradient
-      colors={['#D1FAE5', '#F0FFF4']}
-      className="flex-1"
-      style={{ paddingTop: insets.top }}
+  const renderWateringSchedule = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 400 }}
+      className="my-4 bg-white p-5 rounded-2xl shadow-md"
     >
-    <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}>
-      {loading ? (
-        <ActivityIndicator size="large" color="#4CAF50" className="mt-10" />
-      ) : (
-        <ScrollView contentContainerStyle={{ padding: 20 }}>
-          <MotiView
-            from={{ opacity: 0, translateY: -20 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'spring', delay: 100 }}
-            className="my-4 mx-auto"
+      <Text className="text-xl font-bold text-green-800 mb-3">Watering Schedule</Text>
+      <Calendar
+        style={{
+          borderRadius: 12,
+          backgroundColor: '#F9FAFB',
+        }}
+        theme={{
+          backgroundColor: '#F9FAFB',
+          calendarBackground: '#F9FAFB',
+          textSectionTitleColor: '#16A34A',
+          selectedDayBackgroundColor: '#16A34A',
+          selectedDayTextColor: '#FFFFFF',
+          todayTextColor: '#16A34A',
+          dayTextColor: '#1F2937',
+          dotColor: '#16A34A',
+          selectedDotColor: '#FFFFFF',
+          textDayFontWeight: '500',
+        }}
+        markedDates={Object.keys(wateringSchedule).reduce(
+          (acc: { [key: string]: { dots: { color: string }[]; marked: boolean } }, date) => {
+            acc[date] = {
+              dots: wateringSchedule[date].dots,
+              marked: wateringSchedule[date].marked,
+            };
+            return acc;
+          },
+          {}
+        )}
+        markingType={'multi-dot'}
+      />
+      <View className="mt-3 bg-gray-100 p-3 rounded-lg">
+        <Text className="text-sm font-semibold text-gray-700 mb-2">Legend</Text>
+        {renderColorLegend()}
+        <View className="flex-row items-center justify-center mt-2">
+          <View className="bg-black w-3 h-3 rounded-full mr-1" />
+          <Text className="text-xs text-gray-600">Today</Text>
+        </View>
+      </View>
+    </MotiView>
+  ), [wateringSchedule, renderColorLegend]);
+
+  const renderWateringRecommendations = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 500 }}
+      className="my-4 bg-white p-5 rounded-2xl shadow-md"
+    >
+      <Text className="text-xl font-bold text-green-800 mb-3">Watering Recommendations</Text>
+      {wateringInsights.length > 0 ? (
+        wateringInsights.map((insight, index) => (
+          <TouchableOpacity
+            key={index}
+            className="flex-row items-center bg-gray-50 p-3 rounded-lg mb-2"
+            activeOpacity={0.9}
           >
-            <Text className="text-3xl font-bold text-green-800">
-              {'My Garden Layout'}
-            </Text>
-            <Text className="text-sm text-gray-500 mt-1">
-              Created: {layout?.createdAt ? new Date(layout.createdAt).toLocaleDateString() : 'N/A'}
-            </Text>
-          </MotiView>
-          
-          <MotiView
-            from={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: 'spring', delay: 200 }}
-            className="my-4"
-          >
-            {(weather && address) ? (
-              <WeatherBanner weather={weather} address={address} style={{
-                backgroundColor: '#E6F3FA',
-                borderRadius: 12,
-                padding: 16,
-              }} />
-            ) : error ? (
-              <Text className="text-red-500 text-center">Weather data unavailable</Text>
-            ) : (
-              <View className="h-24 justify-center items-center bg-gray-100 rounded-lg">
-                <ActivityIndicator size="small" color="#4CAF50" />
-                <Text className="text-gray-600 mt-2">Loading weather...</Text>
-              </View>
-            )}
-          </MotiView>
-          
-          <View className="my-4">
-            <Text className="text-lg font-semibold text-gray-700 mb-2">Garden Layout:</Text>
-            <View className="bg-white p-3 rounded-lg shadow-sm">
-              {renderGrid()}
-            </View>
-          </View>
-          
-          <MotiView
-              from={{ opacity: 0, translateY: 20 }}
-              animate={{ opacity: 1, translateY: 0 }}
-              transition={{ type: 'spring', delay: 400 }}
-              className="mt-6 bg-white p-5 rounded-2xl shadow-md"
-            >
-              <Text className="text-xl font-bold text-green-800 mb-3">Watering Schedule</Text>
-              <Calendar
-                style={{
-                  borderRadius: 12,
-                  backgroundColor: '#F9FAFB',
-                }}
-                theme={{
-                  backgroundColor: '#F9FAFB',
-                  calendarBackground: '#F9FAFB',
-                  textSectionTitleColor: '#16A34A',
-                  selectedDayBackgroundColor: '#16A34A',
-                  selectedDayTextColor: '#FFFFFF',
-                  todayTextColor: '#16A34A',
-                  dayTextColor: '#1F2937',
-                  dotColor: '#16A34A',
-                  selectedDotColor: '#FFFFFF',
-                  textDayFontWeight: '500',
-                }}
-                markedDates={Object.keys(wateringSchedule).reduce(
-                  (acc: { [key: string]: { dots: { color: string }[]; marked: boolean } }, date) => {
-                    acc[date] = {
-                      dots: wateringSchedule[date].dots,
-                      marked: wateringSchedule[date].marked,
-                    };
-                    return acc;
-                  },
-                  {}
-                )}
-                markingType={'multi-dot'}
-              />
-              <View className="mt-3 bg-gray-100 p-3 rounded-lg">
-                <Text className="text-sm font-semibold text-gray-700 mb-2">Legend</Text>
-                {renderColorLegend()}
-                <View className="flex-row items-center justify-center mt-2">
-                  <View className="bg-black w-3 h-3 rounded-full mr-1" />
-                  <Text className="text-xs text-gray-600">Today</Text>
-                </View>
-              </View>
-            </MotiView>
-          
-         <MotiView
-            from={{ opacity: 0, translateY: 20 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'spring', delay: 500 }}
-            className="mt-6 bg-white p-5 rounded-2xl shadow-md"
-          >
-            <Text className="text-xl font-bold text-green-800 mb-3">Watering Recommendations</Text>
-            {wateringInsights.length > 0 ? (
-              wateringInsights.map((insight, index) => (
-                <TouchableOpacity
-                  key={index}
-                  className="flex-row items-center bg-gray-50 p-3 rounded-lg mb-2"
-                  activeOpacity={0.9}
-                >
-                  <MaterialCommunityIcons
-                    name={insight.includes('water') ? 'water' : insight.includes('heat') ? 'weather-sunny' : 'leaf'}
-                    size={20}
-                    color="#16A34A"
-                    style={{ marginRight: 8 }}
-                  />
-                  <Text className="text-sm text-gray-700 flex-1">{insight}</Text>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <Text className="text-sm text-gray-500 italic">Generate insights to see recommendations.</Text>
-            )}
-            <CustomButton
-              title="Generate Insights"
-              bgVariant="plant"
-              onPress={generateWateringInsights}
-              className="mt-4 py-3 rounded-xl"
+            <MaterialCommunityIcons
+              name={insight.includes('water') ? 'water' : insight.includes('heat') ? 'weather-sunny' : 'leaf'}
+              size={20}
+              color="#16A34A"
+              style={{ marginRight: 8 }}
             />
-          </MotiView>
-          
-          <View className="mt-4">
-            <Text className="text-lg font-semibold text-gray-700 mb-2">My Plants:</Text>
-            {renderPlantCards()}
-          </View>
-          
-          <View className="h-16" />
-        </ScrollView>
+            <Text className="text-sm text-gray-700 flex-1">{insight}</Text>
+          </TouchableOpacity>
+        ))
+      ) : (
+        <Text className="text-sm text-gray-500 italic">Generate insights to see recommendations.</Text>
       )}
-    </ScrollView>
-    <TouchableOpacity
+      <CustomButton
+        title="Generate Insights"
+        bgVariant="plant"
+        onPress={generateWateringInsights}
+        className="mt-4 py-3 rounded-xl"
+      />
+    </MotiView>
+  ), [wateringInsights, generateWateringInsights]);
+
+  const renderMyPlants = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 550 }}
+      className="my-4"
+    >
+      <Text className="text-xl font-bold text-green-800 mb-3">My Plants</Text>
+      {renderPlantCards()}
+    </MotiView>
+  ), [renderPlantCards]);
+
+  const renderTasks = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 600 }}
+      className="my-4 bg-white p-5 rounded-2xl shadow-md"
+    >
+      <Text className="text-xl font-bold text-green-800 mb-3">Tasks</Text>
+      <TextInput
+        value={newTask}
+        onChangeText={setNewTask}
+        placeholder="Add a new task (e.g., Fertilize tomatoes)"
+        className="border border-gray-300 p-3 rounded-lg mb-3 text-sm"
+      />
+      <CustomButton
+        title="Add Task"
+        bgVariant="plant"
+        onPress={addTask}
+        className="mb-4 py-3 rounded-xl"
+      />
+      {tasks.length === 0 ? (
+        <Text className="text-sm text-gray-500 italic">No tasks added yet.</Text>
+      ) : (
+        <FlatList
+          data={tasks}
+          keyExtractor={(item) => item._id}
+          renderItem={({ item }) => (
+            <View className="flex-row items-center justify-between bg-gray-50 p-3 rounded-lg mb-2">
+              <TouchableOpacity
+                onPress={() => toggleTask(item._id, item.completed)}
+                className="flex-row items-center flex-1"
+              >
+                <Ionicons
+                  name={item.completed ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={20}
+                  color={item.completed ? '#16A34A' : '#6B7280'}
+                  style={{ marginRight: 8 }}
+                />
+                <Text
+                  className={`text-sm ${item.completed ? 'text-gray-400 line-through' : 'text-gray-700'}`}
+                >
+                  {item.description}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => deleteTask(item._id)}>
+                <Ionicons name="trash-outline" size={20} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
+          )}
+          scrollEnabled={false}
+        />
+      )}
+    </MotiView>
+  ), [tasks, newTask, addTask, toggleTask, deleteTask]);
+
+  const renderHarvestHistory = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 650 }}
+      className="my-4 bg-white p-5 rounded-2xl shadow-md"
+    >
+      <Text className="text-xl font-bold text-green-800 mb-3">Harvest History</Text>
+      {harvestHistory.length === 0 ? (
+        <Text className="text-sm text-gray-500 italic">No harvests logged yet.</Text>
+      ) : (
+        <FlatList
+          data={harvestHistory}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View className="flex-row items-center justify-between bg-gray-50 p-3 rounded-lg mb-2">
+              <Text className="text-sm text-gray-700">
+                {item.plantName} harvested on {new Date(item.date).toLocaleDateString()}
+              </Text>
+              <TouchableOpacity onPress={() => deleteHarvest(item.id)}>
+                <Ionicons name="trash-outline" size={20} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
+          )}
+          scrollEnabled={false}
+        />
+      )}
+    </MotiView>
+  ), [harvestHistory, deleteHarvest]);
+
+  const renderNotificationPreferences = useCallback(() => (
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', delay: 700 }}
+      className="my-4 bg-white p-5 rounded-2xl shadow-md"
+    >
+      <Text className="text-xl font-bold text-green-800 mb-3">Notification Preferences</Text>
+      <View className="flex-row items-center mb-3">
+        <Text className="text-sm text-gray-600 mr-2">Enable Notifications</Text>
+        <TouchableOpacity
+          onPress={() => setNotificationsEnabled(!notificationsEnabled)}
+          className="p-2"
+          accessibilityLabel={notificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
+        >
+          <Ionicons
+            name={notificationsEnabled ? 'notifications' : 'notifications-off'}
+            size={24}
+            color={notificationsEnabled ? '#16A34A' : '#6B7280'}
+          />
+        </TouchableOpacity>
+      </View>
+      <View className="mb-3">
+        <Text className="text-sm text-gray-600 mb-1">Notification Time</Text>
+        <TouchableOpacity
+          onPress={() => setShowTimePicker(true)}
+          className="border border-gray-300 p-3 rounded-lg bg-gray-50 flex-row justify-between items-center"
+          accessibilityLabel={`Select notification time, currently set to ${notificationTime}`}
+        >
+          <Text className="text-sm text-gray-700">{notificationTime || '08:00'}</Text>
+          <Ionicons name="time-outline" size={20} color="#6B7280" />
+        </TouchableOpacity>
+      </View>
+      {showTimePicker && (
+        <DateTimePicker
+          value={getTimeAsDate()}
+          mode="time"
+          is24Hour={true}
+          style={{ marginTop: 5, marginBottom: 10 }}
+          display={Platform.OS === 'ios' ? 'inline' : 'default'}
+          onChange={(event, selectedTime) => {
+            if (Platform.OS === 'android' && event.type === 'set' && selectedTime) {
+              setShowTimePicker(false); // Hide picker on Android after selection
+              const formattedTime = format(selectedTime, 'HH:mm');
+              setNotificationTime(formattedTime);
+            } else if (Platform.OS === 'ios' && selectedTime) {
+              // iOS picker stays open (modal behavior), update time immediately
+              const formattedTime = format(selectedTime, 'HH:mm');
+              setNotificationTime(formattedTime);
+            } else if (event.type === 'dismissed') {
+              setShowTimePicker(false); // Hide picker on dismiss (both platforms)
+            }
+          }}
+        />
+      )}
+      <CustomButton
+        title="Save Preferences"
+        bgVariant="plant"
+        onPress={saveNotificationPreferences}
+        className="py-3 rounded-xl"
+      />
+    </MotiView>
+  ), [notificationsEnabled, notificationTime, showTimePicker, saveNotificationPreferences]);
+
+  const renderExportReport = useCallback(() => (
+    <CustomButton
+      title="Export Garden Report"
+      bgVariant="plant"
+      onPress={exportLayoutReport}
+      className="my-4 py-3 rounded-xl"
+    />
+  ), [exportLayoutReport]);
+
+  const sections: Section[] = useMemo(() => [
+    { id: 'motivationalBanner', render: renderMotivationalBanner },
+    { id: 'header', render: renderHeader },
+    { id: 'weather', render: renderWeather },
+    { id: 'gardenLayout', render: renderGardenLayout },
+    { id: 'wateringSchedule', render: renderWateringSchedule },
+    { id: 'wateringRecommendations', render: renderWateringRecommendations },
+    { id: 'myPlants', render: renderMyPlants },
+    { id: 'tasks', render: renderTasks },
+    { id: 'harvestHistory', render: renderHarvestHistory },
+    { id: 'notificationPreferences', render: renderNotificationPreferences },
+    { id: 'exportReport', render: renderExportReport },
+  ], [
+    renderMotivationalBanner,
+    renderHeader,
+    renderWeather,
+    renderGardenLayout,
+    renderWateringSchedule,
+    renderWateringRecommendations,
+    renderMyPlants,
+    renderTasks,
+    renderHarvestHistory,
+    renderNotificationPreferences,
+    renderExportReport,
+  ]);
+
+  if (loading) {
+    return (
+      <LinearGradient colors={['#D1FAE5', '#F0FFF4']} className="flex-1 justify-center" style={{ paddingTop: insets.top }}>
+        <ActivityIndicator size="large" color="#4CAF50" />
+      </LinearGradient>
+    );
+  }
+
+  return (
+<LinearGradient colors={['#D1FAE5', '#F0FFF4']} className="flex-1" style={{ paddingTop: insets.top }}>
+      <FlatList
+        data={sections}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => item.render()}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
+      />
+      <TouchableOpacity
         onPress={() => router.back()}
         className="absolute top-4 left-4 bg-white rounded-full p-3 shadow-lg"
         style={{ marginTop: insets.top }}
       >
-        <Ionicons name="arrow-back" size={24} color="#16a34a" />
+        <Ionicons name="arrow-back" size={24} color="#16A34A" />
       </TouchableOpacity>
     </LinearGradient>
   );

@@ -178,63 +178,96 @@ const indianStates: IndianState[] = [
   }, // (Standard Indian recommendation; direct source not found)
 ]
   
-  const plants = [
+  export interface Plant {
+  name: string;
+  image: any;
+  color: string;
+  noCount: number;
+  spacingFeet: number;
+  sunlight: string;
+  nutrientLevel: string;
+  waterRequirement: number;
+  planting_months: string[];
+  optimal_soil_type: string[];
+  optimal_ph_range: [number, number];
+  pestSusceptibility?: string[];
+  fertilizerNeeds?: string;
+  daysToHarvest?: number;
+}
+
+const plants: Plant[] = [
   {
     name: 'Brinjal',
-    image: plantImages.Eggplant, // Add image reference if available
-    color: '#D4B8E2', // Borrowed from Eggplant in vegetables
+    image: plantImages.Eggplant,
+    color: '#D4B8E2',
     noCount: 1,
     spacingFeet: 1.5,
     sunlight: 'Full Sun',
     nutrientLevel: 'Moderate',
-    waterRequirement: 3, // Matches plants
+    waterRequirement: 3,
     planting_months: ['December', 'January', 'May', 'June'],
     optimal_soil_type: ['Loamy'],
     optimal_ph_range: [6.0, 7.0],
+    pestSusceptibility: ['Fruit and shoot borer', 'Aphids', 'Whiteflies', 'Spider mites'],
+    fertilizerNeeds:
+      'Apply 100-120 kg N, 50-60 kg P₂O₅, 50-60 kg K₂O per hectare. Apply one-third N and full P, K at planting, remainder N in two splits at 30 and 60 days after transplanting.',
+    daysToHarvest: 70, // Typical for Brinjal after transplanting
   },
   {
     name: 'Okra',
     image: plantImages.okra,
     color: '#A8E6CE',
     noCount: 1,
-    spacingFeet: 1.5, // Matches plants
+    spacingFeet: 1.5,
     sunlight: 'Full Sun',
     nutrientLevel: 'Moderate',
     waterRequirement: 3,
     planting_months: ['June', 'July', 'August', 'February'],
     optimal_soil_type: ['Sandy Loam'],
     optimal_ph_range: [6.0, 6.8],
+    pestSusceptibility: ['Fruit borer', 'Aphids', 'Whiteflies', 'Jassids'],
+    fertilizerNeeds:
+      'Apply 60-80 kg N, 40-50 kg P₂O₅, 40-50 kg K₂O per hectare. Half N and full P, K at sowing; rest N at flowering.',
+    daysToHarvest: 50, // Typical for Okra
   },
   {
     name: 'Tomato',
     image: plantImages.tomato,
     color: '#FFB3B3',
     noCount: 1,
-    spacingFeet: 2.5, // Average of 2 (vegetables) and 3 (plants)
+    spacingFeet: 2.5,
     sunlight: 'Full Sun',
     nutrientLevel: 'High',
     waterRequirement: 4,
     planting_months: ['May', 'June', 'November', 'December'],
     optimal_soil_type: ['Loamy', 'Clay Loam'],
     optimal_ph_range: [6.0, 6.8],
+    pestSusceptibility: ['Fruit borer', 'Whiteflies', 'Aphids', 'Leaf miner'],
+    fertilizerNeeds:
+      'Apply 100-120 kg N, 60-80 kg P₂O₅, 50-60 kg K₂O per hectare. Split N in three doses: basal, flowering, fruit set.',
+    daysToHarvest: 70, // Typical for Tomato
   },
   {
     name: 'Onion',
     image: plantImages.Onion,
     color: '#FFD54F',
     noCount: 9,
-    spacingFeet: 0.5, // Matches vegetables
+    spacingFeet: 0.5,
     sunlight: 'Full Sun',
     nutrientLevel: 'Moderate',
     waterRequirement: 2,
     planting_months: ['October', 'November'],
     optimal_soil_type: ['Sandy Loam', 'Clay Loam'],
     optimal_ph_range: [6.0, 7.0],
+    pestSusceptibility: ['Thrips', 'Onion fly', 'Cutworm'],
+    fertilizerNeeds:
+      'Apply 60-75 kg N, 50-60 kg P₂O₅, 50-60 kg K₂O per hectare. Half N and all P, K at planting; rest N after 30 days.',
+    daysToHarvest: 120, // Typical for Onion
   },
   {
     name: 'Red Amaranth',
     image: plantImages.redamaranthus,
-    color: '#C5E1A5', // Borrowed from Lettuce for similar leafy greens
+    color: '#C5E1A5',
     noCount: 4,
     spacingFeet: 0.82,
     sunlight: 'Full Sun to Partial Shade',
@@ -243,12 +276,16 @@ const indianStates: IndianState[] = [
     planting_months: ['February', 'March', 'April', 'May', 'June', 'July', 'August', 'September'],
     optimal_soil_type: ['Sandy Loam'],
     optimal_ph_range: [6.0, 7.0],
+    pestSusceptibility: ['Leaf miners', 'Aphids'],
+    fertilizerNeeds:
+      'Apply 40-60 kg N, 20-30 kg P₂O₅, 20-30 kg K₂O per hectare. N in split doses after each cutting.',
+    daysToHarvest: 30, // Typical for Amaranth
   },
   {
     name: 'Cucumber',
     image: plantImages.Cucumber,
     color: '#81C784',
-    noCount: 2, // Matches vegetables (trellised)
+    noCount: 2,
     spacingFeet: 1,
     sunlight: 'Full Sun',
     nutrientLevel: 'High',
@@ -256,11 +293,15 @@ const indianStates: IndianState[] = [
     planting_months: ['June', 'January', 'February', 'March', 'April'],
     optimal_soil_type: ['Sandy Loam'],
     optimal_ph_range: [6.0, 7.0],
+    pestSusceptibility: ['Fruit fly', 'Aphids', 'Powdery mildew'],
+    fertilizerNeeds:
+      'Apply 60-80 kg N, 40-50 kg P₂O₅, 40-50 kg K₂O per hectare. Half N and full P, K at sowing; rest N at flowering.',
+    daysToHarvest: 50, // Typical for Cucumber
   },
   {
     name: 'Colocasia',
     image: plantImages.colocasia,
-    color: '#C4E17F', // Borrowed from Asparagus for similar structure
+    color: '#C4E17F',
     noCount: 1,
     spacingFeet: 6,
     sunlight: 'Partial Shade to Full Sun',
@@ -269,11 +310,15 @@ const indianStates: IndianState[] = [
     planting_months: ['June', 'July', 'September', 'February', 'March'],
     optimal_soil_type: ['Clay Loam'],
     optimal_ph_range: [5.5, 7.0],
+    pestSusceptibility: ['Aphids', 'Taro beetle'],
+    fertilizerNeeds:
+      'Apply 80-100 kg N, 60 kg P₂O₅, 80 kg K₂O per hectare. Split N in two doses: planting and 45 days after.',
+    daysToHarvest: 180, // Typical for Colocasia
   },
   {
     name: 'Tendli',
     image: plantImages.tendli,
-    color: '#81C784', // Borrowed from Cucumber for similar vine
+    color: '#81C784',
     noCount: 1,
     spacingFeet: 1.5,
     sunlight: 'Full Sun',
@@ -282,11 +327,15 @@ const indianStates: IndianState[] = [
     planting_months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
     optimal_soil_type: ['Sandy Loam'],
     optimal_ph_range: [6.0, 6.5],
+    pestSusceptibility: ['Red pumpkin beetle', 'Aphids'],
+    fertilizerNeeds:
+      'Apply 60-80 kg N, 40-50 kg P₂O₅, 40-50 kg K₂O per hectare. Split N into two doses.',
+    daysToHarvest: 60, // Typical for Tendli
   },
   {
     name: 'Bitter Gourd',
     image: plantImages.bittergourd,
-    color: '#81C784', // Borrowed from Cucumber for similar vine
+    color: '#81C784',
     noCount: 1,
     spacingFeet: 1.5,
     sunlight: 'Full Sun',
@@ -295,12 +344,16 @@ const indianStates: IndianState[] = [
     planting_months: ['July', 'January', 'February', 'May'],
     optimal_soil_type: ['Sandy Loam'],
     optimal_ph_range: [6.0, 6.7],
+    pestSusceptibility: ['Fruit fly', 'Aphids', 'Red pumpkin beetle'],
+    fertilizerNeeds:
+      'Apply 60-80 kg N, 40-50 kg P₂O₅, 40-50 kg K₂O per hectare. Split N into two doses.',
+    daysToHarvest: 60, // Typical for Bitter Gourd
   },
   {
     name: 'Radish',
     image: plantImages.Radish,
     color: '#FF69B4',
-    noCount: 16, // Matches vegetables
+    noCount: 16,
     spacingFeet: 0.5,
     sunlight: 'Full Sun',
     nutrientLevel: 'Moderate',
@@ -308,11 +361,15 @@ const indianStates: IndianState[] = [
     planting_months: ['September', 'October', 'November', 'December', 'January', 'February'],
     optimal_soil_type: ['Sandy Loam'],
     optimal_ph_range: [6.0, 7.0],
+    pestSusceptibility: ['Aphids', 'Root maggot'],
+    fertilizerNeeds:
+      'Apply 40-60 kg N, 30-40 kg P₂O₅, 30-40 kg K₂O per hectare. All at sowing.',
+    daysToHarvest: 30, // Typical for Radish
   },
   {
     name: 'Basil',
     image: plantImages.basil,
-    color: '#AED581', // Borrowed from Spinach for similar herb
+    color: '#AED581',
     noCount: 4,
     spacingFeet: 1,
     sunlight: 'Full Sun to Partial Shade',
@@ -321,11 +378,15 @@ const indianStates: IndianState[] = [
     planting_months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
     optimal_soil_type: ['Loamy'],
     optimal_ph_range: [6.0, 7.0],
+    pestSusceptibility: ['Aphids', 'Japanese beetles'],
+    fertilizerNeeds:
+      'Apply 50-60 kg N, 30 kg P₂O₅, 30 kg K₂O per hectare. N in split doses.',
+    daysToHarvest: 60, // Typical for Basil
   },
   {
     name: 'Pepper',
     image: plantImages.pepper,
-    color: '#FFDBA4', // Borrowed from Chilli for similarity
+    color: '#FFDBA4',
     noCount: 1,
     spacingFeet: 1.5,
     sunlight: 'Full Sun',
@@ -334,12 +395,16 @@ const indianStates: IndianState[] = [
     planting_months: ['September', 'October', 'November', 'December', 'January', 'February'],
     optimal_soil_type: ['Loamy'],
     optimal_ph_range: [6.0, 6.8],
+    pestSusceptibility: ['Thrips', 'Aphids', 'Fruit borer'],
+    fertilizerNeeds:
+      'Apply 100-120 kg N, 60-80 kg P₂O₅, 50-60 kg K₂O per hectare. Split N in three doses.',
+    daysToHarvest: 70, // Typical for Pepper/Chilli
   },
   {
     name: 'Potato',
     image: plantImages.Potato,
     color: '#F0D9FF',
-    noCount: 4, // Matches vegetables
+    noCount: 4,
     spacingFeet: 1,
     sunlight: 'Full Sun',
     nutrientLevel: 'High',
@@ -347,11 +412,15 @@ const indianStates: IndianState[] = [
     planting_months: ['October', 'November', 'December', 'July'],
     optimal_soil_type: ['Sandy Loam', 'Loamy'],
     optimal_ph_range: [5.5, 6.5],
+    pestSusceptibility: ['Aphids', 'Cutworm', 'Potato tuber moth'],
+    fertilizerNeeds:
+      'Apply 120-150 kg N, 60-80 kg P₂O₅, 100-120 kg K₂O per hectare. Split N in two doses.',
+    daysToHarvest: 90, // Typical for Potato
   },
   {
     name: 'Sweet Potato',
     image: plantImages.sweetpotato,
-    color: '#F0D9FF', // Borrowed from Potato
+    color: '#F0D9FF',
     noCount: 1,
     spacingFeet: 1.5,
     sunlight: 'Full Sun',
@@ -360,6 +429,10 @@ const indianStates: IndianState[] = [
     planting_months: ['June', 'July', 'September', 'November', 'December'],
     optimal_soil_type: ['Sandy Loam'],
     optimal_ph_range: [5.5, 6.5],
+    pestSusceptibility: ['Sweet potato weevil', 'Aphids'],
+    fertilizerNeeds:
+      'Apply 50-60 kg N, 50-60 kg P₂O₅, 50-60 kg K₂O per hectare. All at planting.',
+    daysToHarvest: 120, // Typical for Sweet Potato
   },
   {
     name: 'Corn',
@@ -373,11 +446,15 @@ const indianStates: IndianState[] = [
     planting_months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
     optimal_soil_type: ['Loamy'],
     optimal_ph_range: [5.8, 7.0],
+    pestSusceptibility: ['Stem borer', 'Armyworm'],
+    fertilizerNeeds:
+      'Apply 120-150 kg N, 60-80 kg P₂O₅, 40-60 kg K₂O per hectare. N in three splits: basal, knee-high, tasseling.',
+    daysToHarvest: 90, // Typical for Corn
   },
   {
     name: 'Cabbage',
     image: plantImages.cabbage,
-    color: '#C5E1A5', // Borrowed from Lettuce for similar leafy crop
+    color: '#C5E1A5',
     noCount: 1,
     spacingFeet: 1.5,
     sunlight: 'Full Sun',
@@ -386,11 +463,15 @@ const indianStates: IndianState[] = [
     planting_months: ['October', 'November', 'December', 'January'],
     optimal_soil_type: ['Loamy'],
     optimal_ph_range: [6.0, 7.0],
+    pestSusceptibility: ['Diamondback moth', 'Aphids', 'Cabbage looper'],
+    fertilizerNeeds:
+      'Apply 100-120 kg N, 60-80 kg P₂O₅, 60-80 kg K₂O per hectare. Split N in three doses.',
+    daysToHarvest: 90, // Typical for Cabbage
   },
   {
     name: 'Carrot',
     image: plantImages.carrot,
-    color: '#E57373', // Borrowed from Beet for similar root crop
+    color: '#E57373',
     noCount: 16,
     spacingFeet: 0.25,
     sunlight: 'Full Sun',
@@ -399,12 +480,16 @@ const indianStates: IndianState[] = [
     planting_months: ['October', 'November', 'December', 'January', 'February'],
     optimal_soil_type: ['Sandy Loam'],
     optimal_ph_range: [6.0, 6.8],
+    pestSusceptibility: ['Carrot fly', 'Aphids'],
+    fertilizerNeeds:
+      'Apply 60-80 kg N, 40-50 kg P₂O₅, 40-50 kg K₂O per hectare. All at sowing.',
+    daysToHarvest: 70, // Typical for Carrot
   },
   {
     name: 'Cowpea',
     image: plantImages.Cowpea,
     color: '#A1887F',
-    noCount: 9, // Matches vegetables
+    noCount: 9,
     spacingFeet: 0.5,
     sunlight: 'Full Sun',
     nutrientLevel: 'Low',
@@ -412,24 +497,32 @@ const indianStates: IndianState[] = [
     planting_months: ['June', 'July', 'October', 'November'],
     optimal_soil_type: ['Sandy Loam'],
     optimal_ph_range: [6.0, 7.0],
+    pestSusceptibility: ['Aphids', 'Pod borer'],
+    fertilizerNeeds:
+      'Apply 20-25 kg N, 40-50 kg P₂O₅, 20-25 kg K₂O per hectare. All at sowing.',
+    daysToHarvest: 60, // Typical for Cowpea
   },
   {
     name: 'Pumpkin',
     image: plantImages.Pumpkin,
     color: '#FFC107',
     noCount: 1,
-    spacingFeet: 4, // Average of 5 (vegetables) and 3 (plants)
+    spacingFeet: 4,
     sunlight: 'Full Sun',
     nutrientLevel: 'High',
     waterRequirement: 4,
     planting_months: ['June', 'July', 'August', 'September'],
     optimal_soil_type: ['Loamy', 'Sandy Loam'],
     optimal_ph_range: [6.0, 6.8],
+    pestSusceptibility: ['Red pumpkin beetle', 'Fruit fly'],
+    fertilizerNeeds:
+      'Apply 60-80 kg N, 40-50 kg P₂O₅, 40-50 kg K₂O per hectare. Split N into two doses.',
+    daysToHarvest: 100, // Typical for Pumpkin
   },
   {
     name: 'Ridge Gourd',
     image: plantImages.ridgegourd,
-    color: '#81C784', // Borrowed from Cucumber
+    color: '#81C784',
     noCount: 1,
     spacingFeet: 2,
     sunlight: 'Full Sun',
@@ -438,11 +531,15 @@ const indianStates: IndianState[] = [
     planting_months: ['June', 'July'],
     optimal_soil_type: ['Sandy Loam', 'Loamy'],
     optimal_ph_range: [6.0, 7.5],
+    pestSusceptibility: ['Fruit fly', 'Red pumpkin beetle'],
+    fertilizerNeeds:
+      'Apply 60-80 kg N, 40-50 kg P₂O₅, 40-50 kg K₂O per hectare. Split N into two doses.',
+    daysToHarvest: 60, // Typical for Ridge Gourd
   },
   {
     name: 'Cauliflower',
     image: plantImages.Cauliflower,
-    color: '#C5E1A5', // Borrowed from Lettuce
+    color: '#C5E1A5',
     noCount: 1,
     spacingFeet: 1.5,
     sunlight: 'Full Sun',
@@ -451,11 +548,15 @@ const indianStates: IndianState[] = [
     planting_months: ['October', 'November', 'December', 'January', 'February'],
     optimal_soil_type: ['Loamy', 'Clay Loam'],
     optimal_ph_range: [5.5, 6.5],
+    pestSusceptibility: ['Diamondback moth', 'Aphids'],
+    fertilizerNeeds:
+      'Apply 100-120 kg N, 60-80 kg P₂O₅, 60-80 kg K₂O per hectare. Split N in three doses.',
+    daysToHarvest: 90, // Typical for Cauliflower
   },
   {
     name: 'Snake Gourd',
     image: plantImages.snakegourd,
-    color: '#81C784', // Borrowed from Cucumber
+    color: '#81C784',
     noCount: 1,
     spacingFeet: 2,
     sunlight: 'Full Sun',
@@ -464,12 +565,16 @@ const indianStates: IndianState[] = [
     planting_months: ['July', 'January'],
     optimal_soil_type: ['Sandy Loam'],
     optimal_ph_range: [6.5, 7.5],
+    pestSusceptibility: ['Fruit fly', 'Red pumpkin beetle'],
+    fertilizerNeeds:
+      'Apply 60-80 kg N, 40-50 kg P₂O₅, 40-50 kg K₂O per hectare. Split N into two doses.',
+    daysToHarvest: 60, // Typical for Snake Gourd
   },
   {
     name: 'Green Chilli',
     image: plantImages.greenchilli,
     color: '#FFDBA4',
-    noCount: 4, // Matches Chilli in vegetables
+    noCount: 4,
     spacingFeet: 1,
     sunlight: 'Full Sun',
     nutrientLevel: 'Moderate',
@@ -477,6 +582,10 @@ const indianStates: IndianState[] = [
     planting_months: ['January', 'February', 'March', 'April', 'May', 'June'],
     optimal_soil_type: ['Loamy', 'Sandy Loam'],
     optimal_ph_range: [6.0, 7.0],
+    pestSusceptibility: ['Thrips', 'Aphids', 'Fruit borer'],
+    fertilizerNeeds:
+      'Apply 100-120 kg N, 60-80 kg P₂O₅, 50-60 kg K₂O per hectare. Split N in three doses.',
+    daysToHarvest: 70, // Typical for Green Chilli
   },
   {
     name: 'Drumstick',
@@ -486,10 +595,14 @@ const indianStates: IndianState[] = [
     spacingFeet: 6,
     sunlight: 'Full Sun',
     nutrientLevel: 'Moderate',
-    waterRequirement: 3, // Estimated based on similar crops
-    planting_months: ['June', 'July', 'August'], // Common for tropical trees
+    waterRequirement: 3,
+    planting_months: ['June', 'July', 'August'],
     optimal_soil_type: ['Sandy Loam', 'Loamy'],
     optimal_ph_range: [6.0, 7.0],
+    pestSusceptibility: ['Pod fly', 'Fruit borer'],
+    fertilizerNeeds:
+      'Apply 50-60 kg N, 25-30 kg P₂O₅, 25-30 kg K₂O per hectare. All at planting.',
+    daysToHarvest: 180, // Typical for Drumstick pods
   },
   {
     name: 'Breadfruit',
@@ -499,10 +612,14 @@ const indianStates: IndianState[] = [
     spacingFeet: 20,
     sunlight: 'Full Sun',
     nutrientLevel: 'Moderate',
-    waterRequirement: 4, // Estimated for large tropical trees
-    planting_months: ['June', 'July', 'August'], // Common for tropical trees
+    waterRequirement: 4,
+    planting_months: ['June', 'July', 'August'],
     optimal_soil_type: ['Sandy Loam', 'Loamy'],
     optimal_ph_range: [5.5, 7.0],
+    pestSusceptibility: ['Mealybugs', 'Fruit flies'],
+    fertilizerNeeds:
+      'Apply 100-120 kg N, 50-60 kg P₂O₅, 50-60 kg K₂O per hectare. Split N in two doses.',
+    daysToHarvest: 365, // Typical for Breadfruit (first harvest)
   },
   {
     name: 'Asparagus',
@@ -512,10 +629,14 @@ const indianStates: IndianState[] = [
     spacingFeet: 1.5,
     sunlight: 'Full Sun',
     nutrientLevel: 'High',
-    waterRequirement: 4, // Estimated based on nutrient needs
-    planting_months: ['February', 'March', 'April'], // Common for perennials
+    waterRequirement: 4,
+    planting_months: ['February', 'March', 'April'],
     optimal_soil_type: ['Sandy Loam', 'Loamy'],
     optimal_ph_range: [6.5, 7.5],
+    pestSusceptibility: ['Asparagus beetle', 'Aphids'],
+    fertilizerNeeds:
+      'Apply 60-80 kg N, 40-50 kg P₂O₅, 40-50 kg K₂O per hectare. N after each cutting.',
+    daysToHarvest: 730, // Typical for Asparagus (2 years for first harvest)
   },
   {
     name: 'Beet',
@@ -525,10 +646,14 @@ const indianStates: IndianState[] = [
     spacingFeet: 0.5,
     sunlight: 'Full Sun',
     nutrientLevel: 'Moderate',
-    waterRequirement: 3, // Matches Radish
+    waterRequirement: 3,
     planting_months: ['September', 'October', 'November', 'December', 'January', 'February'],
     optimal_soil_type: ['Sandy Loam', 'Loamy'],
     optimal_ph_range: [6.0, 7.5],
+    pestSusceptibility: ['Leaf miners', 'Aphids'],
+    fertilizerNeeds:
+      'Apply 60-80 kg N, 40-50 kg P₂O₅, 40-50 kg K₂O per hectare. All at sowing.',
+    daysToHarvest: 60, // Typical for Beet
   },
   {
     name: 'Spinach',
@@ -538,23 +663,14 @@ const indianStates: IndianState[] = [
     spacingFeet: 0.5,
     sunlight: 'Full Sun to Partial Shade',
     nutrientLevel: 'Moderate',
-    waterRequirement: 3, // Matches similar leafy greens
+    waterRequirement: 3,
     planting_months: ['September', 'October', 'November', 'February', 'March'],
     optimal_soil_type: ['Sandy Loam', 'Loamy'],
     optimal_ph_range: [6.0, 7.5],
-  },
-  {
-    name: 'Eggplant',
-    image: plantImages.Eggplant,
-    color: '#D4B8E2',
-    noCount: 1,
-    spacingFeet: 2,
-    sunlight: 'Full Sun',
-    nutrientLevel: 'Moderate',
-    waterRequirement: 3, // Matches Brinjal
-    planting_months: ['December', 'January', 'May', 'June'], // Matches Brinjal
-    optimal_soil_type: ['Loamy', 'Sandy Loam'],
-    optimal_ph_range: [5.5, 6.5],
+    pestSusceptibility: ['Leaf miners', 'Aphids'],
+    fertilizerNeeds:
+      'Apply 40-60 kg N, 20-30 kg P₂O₅, 20-30 kg K₂O per hectare. N in split doses.',
+    daysToHarvest: 40, // Typical for Spinach
   },
 ];
 
