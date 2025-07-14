@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   TextInput,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Notifications from 'expo-notifications';
@@ -50,6 +51,7 @@ interface LayoutData {
   height: number;
   createdAt: string;
   plantingDate?: string;
+  city?: string;
 }
 
 interface WateringSchedule {
@@ -102,32 +104,8 @@ const LayoutDetail = () => {
   const [harvestHistory, setHarvestHistory] = useState<HarvestHistory[]>([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [notificationTime, setNotificationTime] = useState('08:00');
-  const { weather, address, error } = useWeather();
-
-  const weatherData = useMemo(() => {
-    if (!weather) return null;
-    return {
-      currentTemp: weather.current?.temp_c,
-      currentCondition: weather.current?.condition?.text,
-      dewPoint: weather?.dewpoint_c,
-      humidity: weather.current?.humidity,
-      windSpeed: weather.current?.wind_kph,
-      uvIndex: weather.current?.uv,
-      gust: weather?.gust_kph,
-      heatIndex: weather?.heatindex_c,
-      pressure: weather?.pressure_in,
-      feelsLike: weather?.feelslike_c,
-      forecast: weather.forecast?.forecastday?.map((day) => ({
-        date: day.date,
-        maxTemp: day.day.maxtemp_c,
-        minTemp: day.day.mintemp_c,
-        condition: day.day.condition.text,
-        totalPrecip: day.day.totalprecip_in,
-        willRain: day.day.daily_will_it_rain,
-        chanceOfRain: day.day.daily_chance_of_rain,
-      })),
-    };
-  }, [weather]);
+  const [weatherData, setWeatherData] = useState<any>(null);
+  // const { weather, address, error } = useWeather();
 
   // Request notification permissions
   useEffect(() => {
@@ -162,15 +140,60 @@ const LayoutDetail = () => {
   const fetchLayout = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/layout/${id}`);
-      setLayout(response.data);
+      const layoutResponse = await axios.get(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/layout/${id}`);
+      const layoutData = layoutResponse.data;
+      setLayout(layoutData);
+      console.log('Layout fetched:', layoutData);
+
+      // Fetch weather data based on layout's city
+      if (layoutData.city) {
+        try {
+          const weatherResponse = await axios.get(
+            `http://api.weatherapi.com/v1/forecast.json?key=${process.env.EXPO_PUBLIC_WEATHER_API_KEY}&q=${encodeURIComponent(layoutData.city)}&days=3`
+          );
+          const weather = weatherResponse.data;
+          console.log('Weather fetched for city:', layoutData.city, weather);
+
+          // Structure weather data to match expected format
+          const structuredWeatherData = {
+            currentTemp: weather.current?.temp_c ?? null,
+            currentCondition: weather.current?.condition?.text ?? null,
+            humidity: weather.current?.humidity ?? null,
+            uvIndex: weather.current?.uv ?? null,
+            windSpeed: weather.current?.wind_kph ?? null,
+            dewPoint: weather.current?.dewpoint_c ?? null,
+            gust: weather.current?.gust_kph ?? null,
+            heatIndex: weather.current?.feelslike_c ?? null,
+            pressure: weather.current?.pressure_in ?? null,
+            forecast: weather.forecast?.forecastday?.map((day: any) => ({
+              date: day.date,
+              maxTemp: day.day.maxtemp_c,
+              minTemp: day.day.mintemp_c,
+              condition: day.day.condition.text,
+              totalPrecip: day.day.totalprecip_in,
+              willRain: day.day.daily_will_it_rain,
+              chanceOfRain: day.day.daily_chance_of_rain,
+            })) ?? [],
+          };
+          setWeatherData(structuredWeatherData);
+        } catch (weatherError) {
+          console.error('Error fetching weather:', weatherError);
+          setWeatherData(null);
+          Alert.alert('Weather Error', `Failed to fetch weather data for ${layoutData.city}.`);
+        }
+      } else {
+        console.warn('No city found in layout data');
+        setWeatherData(null);
+        Alert.alert('Error', 'No city specified in the layout.');
+      }
     } catch (error) {
       console.error('Error fetching layout:', error);
+      setWeatherData(null);
       Alert.alert('Error', 'Failed to fetch layout.');
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id])
 
   const fetchWateringHistory = useCallback(async () => {
     try {
@@ -207,8 +230,6 @@ const LayoutDetail = () => {
     Alert.alert('Error', 'Failed to fetch tasks.');
   }
 }, [id, user]);
-
-
 
   const fetchHarvestHistory = useCallback(async () => {
     try {
@@ -701,7 +722,7 @@ const LayoutDetail = () => {
     }
     const recommendations: string[] = [];
     const today = new Date().toISOString().split('T')[0];
-    const todayForecast = weatherData.forecast?.find((day) => day.date === today);
+    const todayForecast = weatherData.forecast?.find((day: any) => day.date === today);
     const plantList: { [key: string]: boolean } = {};
     layout.grid.rows.forEach((row, rowIndex) => {
       row.forEach((cell, colIndex) => {
@@ -1001,32 +1022,101 @@ const LayoutDetail = () => {
   ), [layout]);
 
   const renderWeather = useCallback(() => (
-    <MotiView
-      from={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ type: 'spring', delay: 200 }}
-      className="my-4"
+  <MotiView
+    from={{ opacity: 0, scale: 0.95, translateY: 20 }}
+    animate={{ opacity: 1, scale: 1, translateY: 0 }}
+    transition={{ type: 'spring', delay: 200 }}
+    className="my-4 mx-2 rounded-3xl overflow-hidden shadow-lg"
+  >
+    <LinearGradient
+      colors={['#4CAF50', '#81C784']}
+      className="p-5 mx-3"
     >
-      {weather && address ? (
-        <WeatherBanner
-          weather={weather}
-          address={address}
-          style={{
-            backgroundColor: '#E6F3FA',
-            borderRadius: 12,
-            padding: 16,
-          }}
-        />
-      ) : error ? (
-        <Text className="text-red-500 text-center">Weather data unavailable</Text>
+      {weatherData && layout ? (
+        <>
+          {/* Header Section */}
+          <View className="flex-row justify-between items-center p-3">
+            <View>
+              <Text className="text-white text-2xl font-bold">{layout.city}</Text>
+              <Text className="text-white text-sm opacity-80">
+                {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </Text>
+            </View>
+            <View className="flex-row items-center">
+              <Image
+                source={{ uri: `https:${weatherData.currentConditionIcon || '//cdn.weatherapi.com/weather/64x64/day/113.png'}` }}
+                className="w-16 h-16"
+                resizeMode="contain"
+              />
+              <Text className="text-white text-4xl font-bold ml-2">
+                {weatherData.currentTemp !== null ? `${Math.round(weatherData.currentTemp)}°C` : 'N/A'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Current Weather Details */}
+          <Text className="text-white text-lg font-semibold mb-3 p-3 capitalize">
+            {weatherData.currentCondition || 'N/A'}
+          </Text>
+          <View className="flex-row justify-between mb-4 mx-3">
+            <View className="flex-row items-center">
+              <Ionicons name="water-outline" size={18} color="white" />
+              <Text className="text-white text-sm ml-1">
+                {weatherData.humidity !== null ? `${weatherData.humidity}%` : 'N/A'} Humidity
+              </Text>
+            </View>
+            <View className="flex-row items-center">
+              <Ionicons name="speedometer-outline" size={18} color="white" />
+              <Text className="text-white text-sm ml-1">
+                {weatherData.windSpeed !== null ? `${weatherData.windSpeed} km/h` : 'N/A'} Wind
+              </Text>
+            </View>
+            <View className="flex-row items-center">
+              <Ionicons name="sunny-outline" size={18} color="white" />
+              <Text className="text-white text-sm ml-1">
+                UV {weatherData.uvIndex !== null ? weatherData.uvIndex : 'N/A'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Forecast Section */}
+          {weatherData.forecast && weatherData.forecast.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-2 p-3">
+              {weatherData.forecast.map((day: any, index: number) => (
+                <MotiView
+                  key={day.date}
+                  from={{ opacity: 0, translateX: 20 }}
+                  animate={{ opacity: 1, translateX: 0 }}
+                  transition={{ type: 'spring', delay: 300 + index * 100 }}
+                  className="items-center mr-4"
+                >
+                  <Text className="text-white text-sm font-medium">
+                    {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                  </Text>
+                  <Image
+                    source={{ uri: `https:${day.conditionIcon || '//cdn.weatherapi.com/weather/64x64/day/113.png'}` }}
+                    className="w-10 h-10 my-1"
+                    resizeMode="contain"
+                  />
+                  <Text className="text-white text-sm font-semibold">{Math.round(day.maxTemp)}°</Text>
+                  <Text className="text-white text-xs opacity-80">{Math.round(day.minTemp)}°</Text>
+                </MotiView>
+              ))}
+            </ScrollView>
+          ) : (
+            <Text className="text-white text-sm italic opacity-80">No forecast data available</Text>
+          )}
+        </>
       ) : (
-        <View className="h-24 justify-center items-center bg-gray-100 rounded-lg">
-          <ActivityIndicator size="small" color="#4CAF50" />
-          <Text className="text-gray-600 mt-2">Loading weather...</Text>
+        <View className="p-5 bg-gray-200 rounded-3xl">
+          <Text className="text-red-600 text-base font-semibold text-center">
+            Weather data unavailable for {layout?.city || 'this layout'}
+          </Text>
         </View>
       )}
-    </MotiView>
-  ), [weather, address, error]);
+    </LinearGradient>
+  </MotiView>
+), [weatherData, layout]);
 
   const renderGardenLayout = useCallback(() => (
     <MotiView
@@ -1148,7 +1238,7 @@ const LayoutDetail = () => {
         value={newTask}
         onChangeText={setNewTask}
         placeholder="Add a new task (e.g., Fertilize tomatoes)"
-        className="border border-gray-300 p-3 rounded-lg mb-3 text-sm"
+        className="placeholder-gray-500 border border-gray-300  p-3 rounded-lg mb-3 text-sm"
       />
       <CustomButton
         title="Add Task"

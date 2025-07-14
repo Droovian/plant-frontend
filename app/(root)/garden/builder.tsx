@@ -22,6 +22,7 @@ import CustomButton from '@/components/Button';
 import { plants } from '@/assets/data/plant';
 import { compatibility } from '@/assets/data/plant';
 import { StyleSheet } from 'react-native';
+import useLocationStore from "@/store"
 import axios from 'axios';
 
 const BASE_CELL_SIZE = Dimensions.get('window').width < 375 ? 40 : 48;
@@ -43,6 +44,7 @@ interface PlantIssue {
 
 const Builder = () => {
   const { width, height, unit, soilType, sunlightExposure, soilPH, soilNutrientLevel } = useGardenStore();
+  const { address } = useLocationStore();
   const { user } = useUser();
   const userId = user?.id;
   const router = useRouter();
@@ -58,6 +60,9 @@ const Builder = () => {
   const gridContainerRef = useRef<View>(null);
   const shake = useSharedValue(0);
 
+  const userCity = address ? address?.city : 'Margao';
+  const weatherApiKey = process.env.EXPO_PUBLIC_WEATHER_API_KEY || '';
+  
   const gridWidth = Math.min(Number(width) || 10, 20);
   const gridHeight = Math.min(Number(height) || 10, 20);
   const cellSize = Math.min(
@@ -313,11 +318,14 @@ const Builder = () => {
 
   try {
     const gridData = grid.map((row) => row.map((cell) => ({ plantName: cell })));
-    const response = await axios.post(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/layout`, {
+
+    
+    await axios.post(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/layout`, {
       userId,
       grid: { rows: gridData },
       width: gridWidth,
       height: gridHeight,
+      city: userCity,
     });
 
     // Deduplicate issues
