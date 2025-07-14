@@ -7,6 +7,8 @@ import {
   Image,
   Dimensions,
   Alert,
+  FlatList,
+  Modal,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MotiView } from 'moti';
@@ -51,6 +53,8 @@ const Builder = () => {
   const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, x: 0, y: 0, message: '' });
   const [selectedPlant, setSelectedPlant] = useState<string | null>(null);
   const [plantIssues, setPlantIssues] = useState<PlantIssue[]>([]);
+  const [isIssueModalVisible, setIsIssueModalVisible] = useState(false);
+  const [uniqueIssues, setUniqueIssues] = useState<PlantIssue[]>([]);
   const gridContainerRef = useRef<View>(null);
   const shake = useSharedValue(0);
 
@@ -118,102 +122,107 @@ const Builder = () => {
 
   // Check plant compatibility with garden conditions
   const isPlantCompatible = (plant: typeof plants[0]) => {
-    const issues: string[] = [];
-    const normalize = (str: string) => str.toLowerCase();
+  const issues: string[] = [];
+  const normalize = (str: string) => str.toLowerCase();
 
-    const plantSunlight = normalize(plant.sunlight);
-    const gardenSunlight = sunlightExposure ? normalize(sunlightExposure) : '';
-    const sunlightOptions = plantSunlight.includes('to')
-      ? plantSunlight.split(' to ').map(normalize)
-      : [plantSunlight];
-    if (sunlightExposure && !sunlightOptions.some(opt => gardenSunlight.includes(opt))) {
-      issues.push(`Prefers ${plant.sunlight}`);
-    }
+  const plantSunlight = normalize(plant.sunlight);
+  const gardenSunlight = sunlightExposure ? normalize(sunlightExposure) : '';
+  const sunlightOptions = plantSunlight.includes('to')
+    ? plantSunlight.split(' to ').map(normalize)
+    : [plantSunlight];
+  if (sunlightExposure && !sunlightOptions.some(opt => gardenSunlight.includes(opt))) {
+    issues.push(`Prefers ${plant.sunlight}`);
+  }
 
-    if (soilType && !plant.optimal_soil_type.includes(soilType)) {
-      issues.push(`Prefers ${plant.optimal_soil_type.join(' or ')} soil`);
-    }
+  if (soilType && !plant.optimal_soil_type.includes(soilType)) {
+    issues.push(`Prefers ${plant.optimal_soil_type.join(' or ')} soil`);
+  }
 
-    if (soilPH && (Number(soilPH) < plant.optimal_ph_range[0] || Number(soilPH) > plant.optimal_ph_range[1])) {
-      issues.push(`Prefers pH ${plant.optimal_ph_range[0]}-${plant.optimal_ph_range[1]}`);
-    }
+  if (soilPH && (Number(soilPH) < plant.optimal_ph_range[0] || Number(soilPH) > plant.optimal_ph_range[1])) {
+    issues.push(`Prefers pH ${plant.optimal_ph_range[0]}-${plant.optimal_ph_range[1]}`);
+  }
 
-    // Planting month check (June 2025)
-    const currentMonth = 'June'; // Hardcoded for June 19, 2025
-    if (!plant.planting_months.includes(currentMonth)) {
-      issues.push(`Best planted in ${plant.planting_months.join(', ')}`);
-    }
+  const currentMonth = new Date().toLocaleString('en-US', { month: 'long' }); // Dynamic month (e.g., 'July')
+  if (!plant.planting_months.includes(currentMonth)) {
+    issues.push(`Best planted in ${plant.planting_months.join(', ')}`);
+  }
 
-    return { issues };
-  };
+  return { issues };
+};
 
   const canPlacePlant = (row: number, col: number, plantName: string): { canPlace: boolean; reason?: string } => {
-    const plant = plants.find((v) => v.name === plantName);
-    if (!plant) return { canPlace: false, reason: 'Plant not found' };
+  const plant = plants.find((v) => v.name === plantName);
+  if (!plant) return { canPlace: false, reason: 'Plant not found' };
 
-    if (grid[row] && grid[row][col] !== '') {
-      return { canPlace: false, reason: 'Cell is already occupied' };
+  if (grid[row] && grid[row][col] !== '') {
+    return { canPlace: false, reason: 'Cell is already occupied' };
+  }
+
+  const spacingCells = feetToCells(plant.spacingFeet);
+  const spacingIssues: string[] = [];
+  for (let r = Math.max(0, row - spacingCells); r <= Math.min(gridHeight - 1, row + spacingCells); r++) {
+    for (let c = Math.max(0, col - spacingCells); c <= Math.min(gridWidth - 1, col + spacingCells); c++) {
+      if (grid[r] && grid[r][c] && (r !== row || c !== col)) {
+        const distance = Math.abs(r - row) + Math.abs(c - col); // Manhattan distance
+        if (distance < spacingCells) {
+          spacingIssues.push(`Too close to ${grid[r][c]} (needs ${plant.spacingFeet} ${unit})`);
+        }
+      }
     }
+  }
 
+  return { canPlace: true, reason: spacingIssues.length > 0 ? spacingIssues.join('; ') : undefined };
+};
+
+  const getBorderStyle = (row: number, col: number, plantName: string) => {
+  const compInfo = compatibility[0][plantName] || { companions: [], avoid: [] };
+  const directions = [
+    [-1, 0], [1, 0], [0, -1], [0, 1],
+    [-1, -1], [-1, 1], [1, -1], [1, 1],
+  ];
+  let isCompanion = false;
+  let shouldAvoid = false;
+  let spacingIssue = false;
+  let incompatiblePlants: string[] = [];
+
+  for (const [dr, dc] of directions) {
+    const r = row + dr;
+    const c = col + dc;
+    if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length && grid[r] && grid[r][c]) {
+      const neighbor = grid[r][c];
+      if (compInfo.companions?.includes(neighbor)) {
+        isCompanion = true;
+      }
+      if (compInfo.avoid?.includes(neighbor)) {
+        shouldAvoid = true;
+        if (!incompatiblePlants.includes(neighbor)) {
+          incompatiblePlants.push(neighbor); // Only add plants explicitly in avoid list
+        }
+      }
+    }
+  }
+
+  const plant = plants.find((v) => v.name === plantName);
+  if (plant) {
     const spacingCells = feetToCells(plant.spacingFeet);
-    const spacingIssues: string[] = [];
     for (let r = Math.max(0, row - spacingCells); r <= Math.min(gridHeight - 1, row + spacingCells); r++) {
       for (let c = Math.max(0, col - spacingCells); c <= Math.min(gridWidth - 1, col + spacingCells); c++) {
         if (grid[r] && grid[r][c] && (r !== row || c !== col)) {
-          const distance = Math.sqrt((r - row) ** 2 + (c - col) ** 2);
+          const distance = Math.abs(r - row) + Math.abs(c - col);
           if (distance < spacingCells) {
-            spacingIssues.push(`Too close to ${grid[r][c]} (needs ${plant.spacingFeet} ${unit})`);
-          }
-        }
-      }
-    }
-
-    return { canPlace: true, reason: spacingIssues.length > 0 ? spacingIssues.join('; ') : undefined };
-  };
-
-  const getBorderStyle = (row: number, col: number, plantName: string) => {
-    const compInfo = compatibility[0][plantName] || { companions: [], avoid: [] };
-    const directions = [
-      [-1, 0], [1, 0], [0, -1], [0, 1],
-      [-1, -1], [-1, 1], [1, -1], [1, 1],
-    ];
-    let isCompanion = false;
-    let shouldAvoid = false;
-    let spacingIssue = false;
-    let incompatiblePlants: string[] = [];
-
-    for (const [dr, dc] of directions) {
-      const r = row + dr;
-      const c = col + dc;
-      if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length && grid[r] && grid[r][c]) {
-        const neighbor = grid[r][c];
-        if (compInfo.companions?.includes(neighbor)) isCompanion = true;
-        if (compInfo.avoid?.includes(neighbor)) {
-          shouldAvoid = true;
-          if (!incompatiblePlants.includes(neighbor)) incompatiblePlants.push(neighbor);
-        }
-      }
-    }
-
-    // Check spacing violations
-    const plant = plants.find((v) => v.name === plantName);
-    if (plant) {
-      const spacingCells = feetToCells(plant.spacingFeet);
-      for (let r = Math.max(0, row - spacingCells); r <= Math.min(gridHeight - 1, row + spacingCells); r++) {
-        for (let c = Math.max(0, col - spacingCells); c <= Math.min(gridWidth - 1, col + spacingCells); c++) {
-          if (grid[r] && grid[r][c] && (r !== row || c !== col)) {
-            const distance = Math.sqrt((r - row) ** 2 + (c - col) ** 2);
-            if (distance < spacingCells) {
-              spacingIssue = true;
-              if (!incompatiblePlants.includes(grid[r][c])) incompatiblePlants.push(grid[r][c]);
+            spacingIssue = true;
+            // Only add to incompatiblePlants if not already included via avoid list
+            if (!incompatiblePlants.includes(grid[r][c]) && compInfo.avoid?.includes(grid[r][c])) {
+              incompatiblePlants.push(grid[r][c]);
             }
           }
         }
       }
     }
+  }
 
-    return { isCompanion, shouldAvoid, incompatiblePlants, spacingIssue };
-  };
+  return { isCompanion, shouldAvoid, incompatiblePlants, spacingIssue };
+};
 
   const showTooltip = (rowIndex: number, colIndex: number, message: string) => {
     if (gridContainerRef.current) {
@@ -238,95 +247,104 @@ const Builder = () => {
   }, []);
 
   const handleCellPress = useCallback((rowIndex: number, colIndex: number) => {
-    console.log('handleCellPress: selectedPlant=', selectedPlant, 'row=', rowIndex, 'col=', colIndex);
+  console.log('handleCellPress: selectedPlant=', selectedPlant, 'row=', rowIndex, 'col=', colIndex);
+  
+  if (!grid[rowIndex]) {
+    console.log('Invalid row index');
+    return;
+  }
+
+  const newGrid = grid.map((row) => [...row]);
+
+  // Remove plant if cell is occupied
+  if (newGrid[rowIndex][colIndex]) {
+    newGrid[rowIndex][colIndex] = '';
+    setGrid(newGrid);
+    setPlantIssues((prev) => prev.filter((issue) => issue.row !== rowIndex || issue.col !== colIndex));
+    hideTooltip();
+    return;
+  }
+
+  if (!selectedPlant) {
+    Alert.alert('No Plant Selected', 'Please select a plant first');
+    setHasIssue(true);
+    return;
+  }
+
+  const { canPlace, reason } = canPlacePlant(rowIndex, colIndex, selectedPlant);
+  
+  if (canPlace) {
+    newGrid[rowIndex][colIndex] = selectedPlant;
+    setGrid(newGrid);
     
-    if (!grid[rowIndex]) {
-      console.log('Invalid row index');
-      return;
-    }
-
-    const newGrid = grid.map((row) => [...row]);
-
-    // Remove plant if cell is occupied
-    if (newGrid[rowIndex][colIndex]) {
-      newGrid[rowIndex][colIndex] = '';
-      setGrid(newGrid);
-      // Remove issues for this cell
-      setPlantIssues((prev) => prev.filter((issue) => issue.row !== rowIndex || issue.col !== colIndex));
-      return;
-    }
-
-    if (!selectedPlant) {
-      Alert.alert('No Plant Selected', 'Please select a plant first');
-      setHasIssue(true);
-      return;
-    }
-
-    const { canPlace, reason } = canPlacePlant(rowIndex, colIndex, selectedPlant);
+    const { shouldAvoid, incompatiblePlants, spacingIssue } = getBorderStyle(rowIndex, colIndex, selectedPlant);
+    const plant = plants.find((v) => v.name === selectedPlant);
+    const { issues } = plant ? isPlantCompatible(plant) : { issues: [] };
     
-    if (canPlace) {
-      newGrid[rowIndex][colIndex] = selectedPlant;
-      setGrid(newGrid);
-      
-      const { shouldAvoid, incompatiblePlants } = getBorderStyle(rowIndex, colIndex, selectedPlant);
-      const plant = plants.find((v) => v.name === selectedPlant);
-      const { issues } = plant ? isPlantCompatible(plant) : { issues: [] };
-      
-      const allIssues = [
-        ...issues,
-        ...(reason ? [reason] : []),
-        ...(shouldAvoid ? [`Incompatible with: ${incompatiblePlants.join(', ')}`] : []),
-      ];
+    const allIssues = [
+      ...issues,
+      ...(reason ? [reason] : []),
+      ...(shouldAvoid && incompatiblePlants.length > 0 ? [`Incompatible with: ${incompatiblePlants.join(', ')}`] : []),
+      ...(spacingIssue ? [`Spacing issue: Too close to neighboring plants`] : []),
+    ];
 
-      if(shouldAvoid){
-        setHasIssue(true);
-      }
-      
-      if (allIssues.length > 0) {
-        showTooltip(rowIndex, colIndex, allIssues.join('; '));
-        setPlantIssues((prev) => [
-          ...prev.filter(issue => issue.row !== rowIndex || issue.col !== colIndex),
-          { plant: selectedPlant, row: rowIndex, col: colIndex, issues: allIssues },
-        ]);
-      }
-      
-    } else {
+    if (shouldAvoid || spacingIssue) {
       setHasIssue(true);
-      Alert.alert('Cannot Place Plant', reason || 'Invalid placement');
     }
-  }, [selectedPlant, grid, canPlacePlant, getBorderStyle, isPlantCompatible, showTooltip]);
+    
+    if (allIssues.length > 0) {
+      showTooltip(rowIndex, colIndex, allIssues.join('; '));
+      setPlantIssues((prev) => [
+        ...prev.filter(issue => issue.row !== rowIndex || issue.col !== colIndex),
+        { plant: selectedPlant, row: rowIndex, col: colIndex, issues: allIssues },
+      ]);
+    }
+  } else {
+    setHasIssue(true);
+    Alert.alert('Cannot Place Plant', reason || 'Invalid placement');
+  }
+}, [selectedPlant, grid, canPlacePlant, getBorderStyle, isPlantCompatible, showTooltip]);
 
   const saveLayout = async () => {
-    if (!userId) {
-      Alert.alert('Error', 'Please sign in to save your layout.');
-      return;
-    }
+  if (!userId) {
+    Alert.alert('Error', 'Please sign in to save your layout.');
+    return;
+  }
 
-    try {
-      const gridData = grid.map((row) => row.map((cell) => ({ plantName: cell })));
-      await axios.post(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/layout`, {
-        userId,
-        grid: { rows: gridData },
-        width: gridWidth,
-        height: gridHeight,
-      });
+  try {
+    const gridData = grid.map((row) => row.map((cell) => ({ plantName: cell })));
+    const response = await axios.post(`${process.env.EXPO_PUBLIC_NODE_KEY}/api/layout`, {
+      userId,
+      grid: { rows: gridData },
+      width: gridWidth,
+      height: gridHeight,
+    });
 
-      // Generate summary of issues
-      const issueSummary = plantIssues.map(
-        (issue) => `${issue.plant} at (${issue.row + 1}, ${issue.col + 1}): ${issue.issues.join('; ')}`
-      );
+    // Deduplicate issues
+    const issueMap = new Map<string, PlantIssue>();
+    plantIssues.forEach((issue) => {
+      const issueKey = `${issue.plant}:${issue.issues.sort().join(';')}`;
+      if (!issueMap.has(issueKey)) {
+        issueMap.set(issueKey, {
+          ...issue,
+          row: issue.row,
+          col: issue.col,
+        });
+      } else {
+        const existing = issueMap.get(issueKey)!;
+        existing.row = Math.min(existing.row, issue.row);
+        existing.col = Math.min(existing.col, issue.col);
+      }
+    });
+    const uniqueIssuesList = Array.from(issueMap.values());
 
-      Alert.alert(
-        'Layout Saved',
-        issueSummary.length > 0
-          ? `Layout and care reminders saved! Issues found:\n${issueSummary.join('\n')}`
-          : 'Layout and care reminders saved successfully!'
-      );
-    } catch (error) {
-      console.error('Error saving layout:', error);
-      Alert.alert('Error', 'Failed to save layout.');
-    }
-  };
+    setUniqueIssues(uniqueIssuesList);
+    setIsIssueModalVisible(true);
+  } catch (error) {
+    console.error('Error saving layout:', error);
+    Alert.alert('Error', 'Failed to save layout.');
+  }
+};
 
   const clearGarden = useCallback(() => {
     setGrid(Array(gridHeight).fill(null).map(() => Array(gridWidth).fill('')));
@@ -397,6 +415,15 @@ const Builder = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-gradient-to-b from-green-50 to-green-100" style={{ paddingTop: insets.top }}>
+      {isIssueModalVisible && (
+        <IssueCarousel
+          issues={uniqueIssues}
+          onClose={() => {
+            setIsIssueModalVisible(false);
+            router.push('/my-layouts');
+          }}
+        />
+      )}
       <ScrollView showsVerticalScrollIndicator={false}>
         <MotiView
           from={{ opacity: 0, translateY: -20 }}
@@ -476,7 +503,7 @@ const Builder = () => {
             title="Save Layout"
             bgVariant="plant"
             className="py-4 rounded-xl shadow-lg flex-1 mr-2"
-            onPress={() => { saveLayout(); router.push('/my-layouts'); }}
+            onPress={() => { saveLayout(); }}
           />
           <CustomButton
             title="Clear Garden"
@@ -522,5 +549,61 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
 });
+
+const IssueCarousel = ({ issues, onClose }: { issues: PlantIssue[]; onClose: () => void }) => {
+  const windowWidth = Dimensions.get('window').width;
+  const itemWidth = windowWidth * 0.7 || 250;
+
+  const renderItem = ({ item }: { item: PlantIssue }) => (
+    <View className="bg-white rounded-xl border border-gray-400 mx-1 p-4" style={{ width: itemWidth }}>
+      <Text className="text-lg font-semibold text-green-800 mb-2">
+        {item.plant} at ({item.row + 1}, {item.col + 1})
+      </Text>
+      {item.issues.map((issue, index) => (
+        <Text key={index} className="text-sm text-gray-700 mb-1">
+          • {issue}
+        </Text>
+      ))}
+    </View>
+  );
+
+  return (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={true}
+      onRequestClose={onClose}
+    >
+      <View className="flex-1 bg-white bg-opacity-50 justify-center items-center">
+        <View className="bg-white border rounded-xl p-6 w-11/12 max-w-md">
+          <Text className="text-xl font-bold text-green-800 mb-4 text-center">
+            Garden Issues
+          </Text>
+          {issues.length > 0 ? (
+            <FlatList
+              data={issues}
+              renderItem={renderItem}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item, index) => `${item.plant}-${item.row}-${item.col}-${index}`}
+              contentContainerStyle={{ paddingHorizontal: windowWidth * 0.05 }}
+            />
+          ) : (
+            <Text className="text-sm text-gray-700 text-center">
+              Layout and care reminders saved successfully!
+            </Text>
+          )}
+          <CustomButton
+            title="Close"
+            bgVariant="plant"
+            className="mt-4 py-3 rounded-xl"
+            onPress={onClose}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
 export default Builder;

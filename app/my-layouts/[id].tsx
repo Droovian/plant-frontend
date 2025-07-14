@@ -246,32 +246,17 @@ const LayoutDetail = () => {
   }, [user]);
 
   const getWateringInterval = useCallback((plantName: string) => {
-    switch (plantName) {
-      case 'Okra':
-      case 'Tomato':
-      case 'Pumpkin':
-      case 'Eggplant':
-      case 'Potato':
-      case 'Asparagus':
-      case 'Onion':
-      case 'Cowpea':
-      case 'Corn':
-        return 3;
-      case 'Chilli':
-      case 'Beet':
-      case 'Spinach':
-      case 'Cucumber':
-      case 'Lettuce':
-        return 2;
-      case 'Drumstick':
-      case 'Breadfruit':
-        return 7;
-      case 'Radish':
-        return 1;
-      default:
-        return 3;
-    }
-  }, []);
+  const plant = plants.find((p) => p.name === plantName);
+  if (!plant || !plant.waterRequirement) return 3; // Default to 3 days if plant or waterRequirement not found
+  const intervalMap: { [key: number]: number } = {
+    5: 1, // High water need: every day (e.g., Colocasia)
+    4: 2, // Moderate-high: every 2 days (e.g., Tomato, Pepper)
+    3: 3, // Moderate: every 3 days (e.g., Basil, Carrot)
+    2: 5, // Low-moderate: every 5 days (e.g., Cowpea)
+    1: 7, // Low: every 7 days (e.g., Drumstick)
+  };
+  return intervalMap[plant.waterRequirement] || 3; // Fallback to 3 days
+}, [plants]);
 
   const scheduleNotification = useCallback(
   async (title: string, body: string, date: Date) => {
@@ -482,14 +467,14 @@ const LayoutDetail = () => {
     [harvestHistory]
   );
 
-  const saveNotificationPreferences = useCallback(async () => {
+    const saveNotificationPreferences = useCallback(async () => {
     if (!user || !user.id) {
       console.error('User or userId not available', { user });
       Alert.alert('Error', 'User not authenticated.');
       return;
     }
-    if (!notificationTime || !/^\d{2}:\d{2}$/.test(notificationTime)) {
-      Alert.alert('Error', 'Please select a valid time.');
+    if (!notificationTime || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(notificationTime)) {
+      Alert.alert('Error', 'Please enter a valid time in HH:mm format (e.g., 08:00).');
       return;
     }
     try {
