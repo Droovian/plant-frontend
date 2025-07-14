@@ -10,6 +10,7 @@ interface PredictionResult {
   class: string;
   confidence: number;
   insights: string;
+  heatmap: string;
 }
 
 type PlantHealthImages = {
@@ -28,7 +29,7 @@ export default function Detect() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [predictionResult, setPredictionResult] = useState<PredictionResult | null>(null);
-
+  const [heatmap, setHeatmap] = useState<string | undefined>(undefined);
   const pickImageAsync = async (): Promise<void> => {
     setError(null);
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -102,6 +103,7 @@ export default function Detect() {
           class: data.predicted_class,
           confidence: data.confidence,
           insights: data.insights,
+          heatmap: data.heatmap,
         });
       } else {
         setError(data.error || 'Failed to analyze image');
@@ -246,6 +248,13 @@ export default function Detect() {
                   </View>
                 </View>
               )}
+            </View>
+
+            <View style={styles.imageContainer}>
+                <Image
+                  source={{ uri: `data:image/jpeg;base64,${predictionResult.heatmap}` }}
+                  style={{ width: 300, height: 300}}
+                />
             </View>
             
             <View style={styles.actionButtons}>
